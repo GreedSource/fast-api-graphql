@@ -1,15 +1,15 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.12-slim-bookworm
 
-# No generar archivos .pyc y habilitar stdout sin buffer
+# --- Env ---
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV TZ=America/Merida
 
-# Crear entorno virtual manualmente
+# --- Virtualenv ---
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Instalar dependencias del sistema (optimizadas para MongoDB SSL)
+# --- System deps ---
 RUN apt-get update && apt-get install --no-install-recommends -y \
     ca-certificates \
     libssl-dev \
@@ -18,18 +18,19 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     && update-ca-certificates --fresh \
     && rm -rf /var/lib/apt/lists/*
 
-# Crear directorio de trabajo
+# --- Workdir ---
 WORKDIR /app
 
-# Copiar e instalar dependencias
+# --- Install deps ---
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Copiar solo el código fuente necesario
+# --- Copy source ---
 COPY server/ server/
 COPY app.py .
 
-EXPOSE 5000
+# --- Expose ---
+EXPOSE 8000
 
-# Comando para correr la app (ajústalo según tu entrypoint)
-CMD ["python", "app.py"]
+# --- Run ASGI ---
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

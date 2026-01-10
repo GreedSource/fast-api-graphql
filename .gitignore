@@ -29,7 +29,6 @@ test-results/
 # Archivos de entorno y configuración local
 .env
 *.env
-.env.*
 
 # Archivos del sistema operativo
 .DS_Store
