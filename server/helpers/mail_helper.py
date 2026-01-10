@@ -1,100 +1,70 @@
 import os
-import threading
-from flask_mail import Mail, Message
-from flask import Flask, render_template
+import smtplib
+from email.message import EmailMessage
 from typing import List, Optional
 
+from fastapi import BackgroundTasks
+
 from server.decorators.singleton_decorator import singleton
-from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 from server.helpers.logger_helper import LoggerHelper
+from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 
 
 @singleton
 class MailHelper:
     def __init__(self):
-        self.app: Optional[Flask] = None
-        self.mail: Optional[Mail] = None
         self._initialized = False
 
-    def init_app(self, app: Flask):
+    def init_app(self):
         if self._initialized:
-            return  # ya inicializado
+            return
 
-        self.app = app
+        self.mail_server = os.environ.get("MAIL_SERVER", "smtp.mailgun.org")
+        self.mail_port = int(os.environ.get("MAIL_PORT", 587))
+        self.mail_username = os.environ.get("MAIL_USERNAME")
+        self.mail_password = os.environ.get("MAIL_PASSWORD")
+        self.default_sender = os.environ.get("MAIL_DEFAULT_SENDER")
 
-        self.app.config["MAIL_SERVER"] = os.environ.get(
-            "MAIL_SERVER", "smtp.mailgun.org"
-        )
-        self.app.config["MAIL_PORT"] = int(os.environ.get("MAIL_PORT", 587))
-        self.app.config["MAIL_USE_TLS"] = (
-            os.environ.get("MAIL_USE_TLS", "true").lower() == "true"
-        )
-        self.app.config["MAIL_USE_SSL"] = (
-            os.environ.get("MAIL_USE_SSL", "false").lower() == "true"
-        )
-        self.app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
-        self.app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
-        self.app.config["MAIL_DEFAULT_SENDER"] = os.environ.get("MAIL_DEFAULT_SENDER")
-
-        self.mail = Mail(self.app)
-        LoggerHelper.info(f"{self.__class__.__name__} initialized")
         self._initialized = True
+        LoggerHelper.info("MailHelper initialized (FastAPI)")
 
     def send_email(
         self,
         subject: str,
         recipients: List[str],
         body: Optional[str] = None,
-        html_template: Optional[str] = None,
-        context: Optional[dict] = None,
+        html: Optional[str] = None,
         sender: Optional[str] = None,
-        async_send: bool = False,
+        background_tasks: Optional[BackgroundTasks] = None,
     ) -> bool:
         if not self._initialized:
-            raise CustomGraphQLExceptionHelper(
-                "MailHelper no está inicializado. Llama a init_app(app) primero."
-            )
+            raise CustomGraphQLExceptionHelper("MailHelper no está inicializado")
 
-        html = None
-        if html_template:
-            html = render_template(html_template, **(context or {}))
+        msg = EmailMessage()
+        msg["Subject"] = subject
+        msg["From"] = sender or self.default_sender
+        msg["To"] = ", ".join(recipients)
+        msg.set_content(body or "")
 
-        msg = Message(
-            subject=subject,
-            recipients=recipients,
-            body=body or "",
-            html=html,
-            sender=sender or self.app.config.get("MAIL_DEFAULT_SENDER"),
-        )
+        if html:
+            msg.add_alternative(html, subtype="html")
 
-        try:
-            if async_send:
-                self.app.logger.info(
-                    f"[MailHelper] Enviando email async a: {recipients} - Asunto: {subject}"
-                )
-                thread = threading.Thread(target=self._send_async, args=(msg,))
-                thread.start()
-                return True
-            else:
-                self.app.logger.info(
-                    f"[MailHelper] Enviando email sync a: {recipients} - Asunto: {subject}"
-                )
-                return self._send(msg)
-        except Exception as e:
-            self.app.logger.error(f"[MailHelper] Error al enviar correo (enviar): {e}")
-            return False
-
-    def _send(self, msg) -> bool:
-        try:
-            self.mail.send(msg)
-            self.app.logger.info(
-                f"[MailHelper] Correo enviado correctamente a: {msg.recipients} - Asunto: {msg.subject}"
-            )
+        if background_tasks:
+            background_tasks.add_task(self._send, msg)
             return True
-        except Exception as e:
-            self.app.logger.error(f"[MailHelper] Error al enviar correo (send): {e}")
-            return False
 
-    def _send_async(self, msg):
-        with self.app.app_context():
-            self._send(msg)
+        return self._send(msg)
+
+    def _send(self, msg: EmailMessage) -> bool:
+        try:
+            with smtplib.SMTP(self.mail_server, self.mail_port) as server:
+                server.starttls()
+                server.login(self.mail_username, self.mail_password)
+                server.send_message(msg)
+
+            LoggerHelper.info(f"Correo enviado a {msg['To']} - {msg['Subject']}")
+            return True
+
+        except Exception as e:
+            LoggerHelper.error(f"Error enviando correo: {e}")
+            return False
