@@ -7,6 +7,7 @@ from server.helpers.custom_graphql_exception_helper import (
 )
 from server.helpers.logger_helper import LoggerHelper
 from server.helpers.mail_helper import MailHelper
+from server.models.user_model import UserItemModel
 from server.repositories.user_repository import UserRepository
 from server.utils.auth_utils import (
     verify_password,
@@ -25,30 +26,17 @@ class AuthService:
         LoggerHelper.info("AuthService initialized")
 
     # -----------------
-    # Utils
-    # -----------------
-
-    def user_to_dict(self, user):
-        return {
-            "id": str(user["_id"]),
-            "name": user["name"],
-            "lastname": user["lastname"],
-            "email": user["email"],
-            "isAdmin": user.get("isAdmin", False),
-        }
-
-    # -----------------
     # Actions
     # -----------------
 
     async def register(self, user_data: dict):
         inserted_id = await self.__repository.create(user_data)
         user_data["_id"] = inserted_id
-
+        model = UserItemModel(**user_data)
         return {
             "accessToken": create_token({"id": str(inserted_id)}),
             "refreshToken": create_refresh_token({"id": str(inserted_id)}),
-            "user": self.user_to_dict(user_data),
+            "user": model.model_dump(),
         }
 
     async def login(self, email: str, password: str):
@@ -57,10 +45,11 @@ class AuthService:
         if not user or not verify_password(password, user["password"]):
             raise CustomGraphQLExceptionHelper("Credenciales inválidas")
 
+        model = UserItemModel(**user)
         return {
-            "accessToken": create_token({"id": str(user["_id"])}),
+            "accessToken": create_token(model.model_dump()),
             "refreshToken": create_refresh_token({"id": str(user["_id"])}),
-            "user": self.user_to_dict(user),
+            "user": model.model_dump(),
         }
 
     async def refresh_token(self, refresh_token: str):
@@ -69,8 +58,9 @@ class AuthService:
         user = await self.__repository.find_by_id(payload["id"])
         if not user:
             raise CustomGraphQLExceptionHelper("Usuario no encontrado")
+        model = UserItemModel(**user)
 
-        return create_token({"id": str(user["_id"])})
+        return create_token(model.model_dump())
 
     async def recover_password(self, email: str, background_tasks):
         user = await self.__repository.find_by_email(email)

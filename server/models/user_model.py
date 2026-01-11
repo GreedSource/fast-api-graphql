@@ -1,8 +1,10 @@
 import re
+from typing import List
 from pydantic import (
     BaseModel,
     Field,
-    computed_field,
+    RootModel,
+    ValidationInfo,
     field_validator,
     model_validator,
     EmailStr,
@@ -45,14 +47,30 @@ class RegisterModel(BaseModel):
             )
         return v
 
-    @computed_field
-    @property
-    def isAdmin(cls) -> bool:
-        return True
-
 
 class UpdateUserModel(BaseModel):
     name: str = Field(..., description="User name", min_length=3)
     lastname: str = Field(..., description="User lastname", min_length=3)
     email: EmailStr | None = Field(None, description="User email")
-    isAdmin: bool | None = Field(None, description="Is user admin")
+
+
+class UserItemModel(BaseModel):
+    id: str = Field(..., alias="_id", description="User ID")
+    name: str = Field(..., description="User name")
+    lastname: str = Field(..., description="User lastname")
+    email: EmailStr = Field(..., description="User email")
+
+    @field_validator("id", mode="before")
+    def validate_id(cls, v, info: ValidationInfo):
+        if not v:
+            raise CustomGraphQLExceptionHelper(f"{info.field_name} not valid.")
+        return str(v)
+
+    model_config = {
+        "populate_by_name": True  # permite pasar 'id' o '_id' al instanciar
+    }
+
+
+# Crear un modelo que sea una lista de UserItemModel
+class UserListModel(RootModel):
+    root: List[UserItemModel]  # <--- lista de usuarios

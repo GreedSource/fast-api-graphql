@@ -6,6 +6,7 @@ from server.helpers.custom_graphql_exception_helper import (
 
 # from server.helpers.mail_helper import MailHelper
 from server.helpers.logger_helper import LoggerHelper
+from server.models.user_model import UserItemModel, UserListModel
 from server.repositories.user_repository import UserRepository
 
 
@@ -17,31 +18,18 @@ class UserService:
         LoggerHelper.info("UserService initialized")
 
     # -----------------
-    # Utils
-    # -----------------
-
-    def user_to_dict(self, user):
-        return {
-            "id": str(user["_id"]),
-            "name": user["name"],
-            "lastname": user["lastname"],
-            "email": user["email"],
-            "isAdmin": user.get("isAdmin", False),
-        }
-
-    # -----------------
     # Actions
     # -----------------
 
     async def get_users(self):
         users = await self.__repository.find_all()
-        return [self.user_to_dict(user) for user in users]
+        return UserListModel.model_validate(users).model_dump()
 
     async def get_user(self, user_id: str):
         user = await self.__repository.find_by_id(user_id)
         if not user:
             return None
-        return self.user_to_dict(user)
+        return UserItemModel(**user)
 
     async def update_user(self, user_id: str, update_data: dict):
         user = await self.__repository.find_by_id(user_id)
@@ -52,7 +40,7 @@ class UserService:
             await self.__repository.update(user_id, update_data)
 
         user = await self.__repository.find_by_id(user_id)
-        return self.user_to_dict(user)
+        return UserItemModel(**user)
 
     async def delete_user(self, user_id: str):
         result = await self.__repository.delete(user_id)

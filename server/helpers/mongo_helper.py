@@ -6,6 +6,7 @@ from motor.motor_asyncio import (
     AsyncIOMotorDatabase,
     AsyncIOMotorCollection,
 )
+from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from server.constants.error_messages import (
@@ -172,11 +173,30 @@ class MongoHelper:
     ):
         collection = self.get_collection(collection_name)
 
+        # Aseguramos que siempre se actualice updated_at
         update.setdefault("$set", {})
         update["$set"]["updated_at"] = datetime.now(timezone.utc)
 
         try:
-            return await collection.update_one(filter_, update, upsert=upsert, **kwargs)
+            # Usamos find_one_and_update para devolver el documento actualizado
+            updated_doc = await collection.find_one_and_update(
+                filter_,
+                update,
+                upsert=upsert,
+                return_document=ReturnDocument.AFTER,  # devuelve después de actualizar
+                **kwargs,
+            )
+
+            if not updated_doc:
+                # Si no se encontró nada
+                raise CustomGraphQLExceptionHelper(
+                    "Documento no encontrado.",
+                    HTTPErrorCode.NOT_FOUND,
+                    details={"collection": collection_name},
+                )
+
+            return updated_doc  # devuelvo el documento actualizado como dict
+
         except DuplicateKeyError:
             message = DUPLICATE_ERROR_MESSAGES.get(
                 collection_name, DEFAULT_DUPLICATE_MESSAGE
@@ -186,6 +206,7 @@ class MongoHelper:
                 HTTPErrorCode.CONFLICT,
                 details={"collection": collection_name},
             )
+
         except PyMongoError as e:
             raise CustomGraphQLExceptionHelper(
                 f"Error al actualizar documento: {e}",

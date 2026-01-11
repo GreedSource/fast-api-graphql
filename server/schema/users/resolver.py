@@ -9,7 +9,6 @@ from server.models.user_model import UpdateUserModel
 from server.services.user_service import UserService
 
 
-@singleton
 class UserResolver:
     def __init__(self):
         self.query = QueryType()

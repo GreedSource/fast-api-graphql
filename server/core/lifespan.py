@@ -14,7 +14,7 @@ async def lifespan(app: FastAPI):
 
     mongo = MongoHelper(
         db=db,
-        allowed_collections={"users"},
+        allowed_collections={"users", "roles"},
     )
 
     await mongo.create_index(
@@ -22,6 +22,13 @@ async def lifespan(app: FastAPI):
         keys=[("email", 1)],
         unique=True,
         name="users_email_unique_idx",
+    )
+
+    await mongo.create_index(
+        collection_name="roles",
+        keys=[("name", 1)],
+        unique=True,
+        name="roles_name_unique_idx",
     )
 
     LoggerHelper.success("MongoDB ready")

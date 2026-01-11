@@ -1,3 +1,6 @@
+# server/schema/schema.graphql
+scalar DateTime
+
 type Query {
   _empty: String
 }

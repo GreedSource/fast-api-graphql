@@ -10,7 +10,6 @@ from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.logger_helper import LoggerHelper
 from server.schema import schema
 from server.utils.custom_error_formatter_utils import custom_format_error
-from server.helpers.mail_helper import MailHelper
 
 # Desactivar logs ruidosos de ariadne
 logging.getLogger("ariadne").setLevel(logging.CRITICAL)
@@ -29,9 +28,6 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    # Inicializar MailHelper
-    # MailHelper().init_app()
 
     @app.get("/")
     async def root():

@@ -3,7 +3,6 @@ type User {
   name: String!
   lastname: String!
   email: String!
-  isAdmin: Boolean!
 }
 
 extend type Query {
@@ -16,7 +15,6 @@ input UpdateUserInput {
   name: String!
   lastname: String!
   email: String
-  isAdmin: Boolean
 }
 
 extend type Mutation {
