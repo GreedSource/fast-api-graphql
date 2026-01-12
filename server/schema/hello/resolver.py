@@ -1,3 +1,4 @@
+# server/schema/hello/resolver.py
 from ariadne import QueryType
 
 from server.helpers.logger_helper import LoggerHelper

@@ -1,10 +1,9 @@
-# server/resolvers/auth_resolver.py
 from ariadne import QueryType, MutationType
 
 from server.decorators.require_token_decorator import require_token
 from server.helpers.logger_helper import LoggerHelper
 from server.models.user_model import RegisterModel
-
+from server.models.response_model import ResponseModel
 from server.services.auth_service import AuthService
 
 
@@ -39,23 +38,49 @@ class AuthResolver:
 
     async def resolve_register(self, _, info, input):
         model = RegisterModel(**input)
-        user_data = model.model_dump()
 
-        return await self.auth_service.register(user_data)
+        user = await self.auth_service.register(user_data=model.model_dump())
 
+        return ResponseModel(
+            status=200,
+            message="User registered successfully",
+            data=user,
+        )
+
+    # En tu AuthResolver
     async def resolve_login(self, _, info, input):
-        return await self.auth_service.login(input["email"], input["password"])
+        response = await self.auth_service.login(
+            email=input["email"], password=input["password"]
+        )
+        return ResponseModel(
+            status=200,
+            message="Login successful",
+            data=response,
+        )
 
     async def resolve_refresh_token(self, _, info, refreshToken):
-        access_token = await self.auth_service.refresh_token(refreshToken)
-        return {"accessToken": access_token}
+        response = await self.auth_service.refresh_token(
+            refresh_token=refreshToken,
+        )
+
+        return ResponseModel(
+            status=200,
+            message="Token refreshed",
+            data=response,
+        )
 
     async def resolve_recover_password(self, _, info, email):
         request = info.context["request"]
 
-        return await self.auth_service.recover_password(
+        result = await self.auth_service.recover_password(
             email=email,
             background_tasks=request.state.background_tasks,
+        )
+
+        return ResponseModel(
+            status=200,
+            message="Recovery email sent",
+            data=result,
         )
 
     # -----------------
@@ -64,7 +89,11 @@ class AuthResolver:
 
     @require_token
     async def resolve_profile(self, _, info):
-        return info.context["current_user"]
+        return ResponseModel(
+            status=200,
+            message="Profile retrieved",
+            data=info.context["current_user"],
+        )
 
     def get_resolvers(self):
         return [self.query, self.mutation]

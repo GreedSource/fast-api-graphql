@@ -1,4 +1,4 @@
-# server/schema/roles/roles_schema.graphql
+# server/schema/roles/schema.graphql
 type Role {
   id: ID!
   name: String!

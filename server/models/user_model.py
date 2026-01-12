@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import List, Optional
 from pydantic import (
     BaseModel,
     Field,
@@ -19,7 +19,9 @@ class RegisterModel(BaseModel):
     lastname: str = Field(..., description="User lastname", min_length=3)
     email: EmailStr = Field(..., description="User email")
     password: str = Field(..., description="Password")
-    confirm_password: str = Field(..., description="Password confirmation")
+    confirm_password: str = Field(
+        ..., description="Password confirmation", alias="confirmPassword"
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -47,10 +49,14 @@ class RegisterModel(BaseModel):
             )
         return v
 
+    model_config = {
+        "populate_by_name": True  # permite pasar 'id' o '_id' al instanciar
+    }
+
 
 class UpdateUserModel(BaseModel):
-    name: str = Field(..., description="User name", min_length=3)
-    lastname: str = Field(..., description="User lastname", min_length=3)
+    name: Optional[str] = Field(None, description="User name", min_length=3)
+    lastname: Optional[str] = Field(None, description="User lastname", min_length=3)
     email: EmailStr | None = Field(None, description="User email")
 
 

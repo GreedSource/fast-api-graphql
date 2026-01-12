@@ -1,0 +1,42 @@
+type Action {
+  id: ID!
+  name: String!
+  key: String!
+  description: String
+  active: Boolean!
+}
+
+input CreateActionInput {
+  name: String!
+  key: String!
+  description: String
+  active: Boolean = true
+}
+
+input UpdateActionInput {
+  id: ID!
+  name: String
+  key: String
+  description: String
+  active: Boolean
+}
+
+type ActionResponse {
+  status: Int!
+  message: String!
+  data: Action
+}
+
+type ActionListResponse {
+  status: Int!
+  message: String!
+  data: [Action!]!
+}
+
+extend type Query {
+  actions: ActionListResponse!
+}
+
+extend type Mutation {
+  createAction(input: CreateActionInput!): ActionResponse!
+}

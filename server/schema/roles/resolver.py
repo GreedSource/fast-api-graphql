@@ -1,10 +1,14 @@
-# server/resolvers/auth_resolver.py
 from ariadne import QueryType, MutationType
+from graphql import GraphQLResolveInfo
 
 from server.decorators.require_token_decorator import require_token
 from server.helpers.logger_helper import LoggerHelper
 from server.models.response_model import ResponseModel
-from server.models.role_model import CreateRoleModel, RoleItemModel, UpdateRoleModel
+from server.models.role_model import (
+    CreateRoleModel,
+    RoleItemModel,
+    UpdateRoleModel,
+)
 from server.services.role_service import RoleService
 
 
@@ -18,34 +22,38 @@ class RoleResolver:
         self._bind_queries()
         self._bind_mutations()
 
-        LoggerHelper.info("AuthResolver initialized")
+        LoggerHelper.info("RoleResolver initialized")
 
     # -----------------
     # Bindings
     # -----------------
 
     def _bind_queries(self):
-        # self.query.set_field("profile", self.resolve_profile)
-        pass
+        self.query.set_field("roles", self.resolve_roles)
+        self.query.set_field("role", self.resolve_role)
 
     def _bind_mutations(self):
         self.mutation.set_field("createRole", self.resolve_create)
         self.mutation.set_field("updateRole", self.resolve_update)
+        self.mutation.set_field("deleteRole", self.resolve_delete)
 
     # -----------------
     # Mutations
     # -----------------
 
-    async def resolve_create(self, _, info, input):
+    @require_token
+    async def resolve_create(self, _, info: GraphQLResolveInfo, input):
         model = CreateRoleModel(**input)
         response = await self.__service.create(model)
+
         return ResponseModel[RoleItemModel](
             status=200,
             message="Role created successfully",
             data=response,
         )
 
-    async def resolve_update(self, _, info, input):
+    @require_token
+    async def resolve_update(self, _, info: GraphQLResolveInfo, input):
         model = UpdateRoleModel(**input)
         response = await self.__service.update(model)
         return ResponseModel[RoleItemModel](
@@ -54,8 +62,42 @@ class RoleResolver:
             data=response,
         )
 
+    @require_token
+    async def resolve_delete(self, _, info: GraphQLResolveInfo, id: str):
+        result = await self.__service.delete_role(id)
+
+        return ResponseModel[bool](
+            status=200,
+            message="Role deleted successfully" if result else "Role not found",
+            data=result,
+        )
+
     # -----------------
     # Queries
+    # -----------------
+
+    @require_token
+    async def resolve_roles(self, *_):
+        roles = await self.__service.get_roles()
+
+        return ResponseModel[list[RoleItemModel]](
+            status=200,
+            message="Roles fetched successfully",
+            data=roles,
+        )
+
+    @require_token
+    async def resolve_role(self, _, __, id: str):
+        role = await self.__service.get_role(id)
+
+        return ResponseModel[RoleItemModel](
+            status=200,
+            message="Role fetched successfully" if role else "Role not found",
+            data=role,
+        )
+
+    # -----------------
+    # Export
     # -----------------
 
     def get_resolvers(self):

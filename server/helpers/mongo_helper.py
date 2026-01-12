@@ -228,3 +228,37 @@ class MongoHelper:
                 f"Error al eliminar documento: {e}",
                 HTTPErrorCode.BAD_REQUEST,
             )
+
+    # --------------------------------------------------
+    # Aggregation
+    # --------------------------------------------------
+
+    async def aggregate(
+        self,
+        collection_name: str,
+        pipeline: List[Dict[str, Any]],
+        allow_disk_use: bool = False,
+        **kwargs,
+    ) -> List[Dict[str, Any]]:
+        """
+        Ejecuta un aggregation pipeline y devuelve la lista de documentos.
+        """
+        collection = self.get_collection(collection_name)
+
+        try:
+            cursor = collection.aggregate(
+                pipeline,
+                allowDiskUse=allow_disk_use,
+                **kwargs,
+            )
+            return [doc async for doc in cursor]
+
+        except PyMongoError as e:
+            raise CustomGraphQLExceptionHelper(
+                f"Error en aggregation: {e}",
+                HTTPErrorCode.BAD_REQUEST,
+                details={
+                    "collection": collection_name,
+                    "pipeline": pipeline,
+                },
+            )

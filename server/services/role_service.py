@@ -4,7 +4,6 @@ from server.helpers.custom_graphql_exception_helper import (
     CustomGraphQLExceptionHelper,
 )
 
-# from server.helpers.mail_helper import MailHelper
 from server.helpers.logger_helper import LoggerHelper
 from server.models.role_model import (
     CreateRoleModel,
