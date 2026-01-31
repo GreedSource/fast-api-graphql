@@ -52,3 +52,15 @@ class RoleService:
     async def delete_role(self, role_id: str):
         result = await self.__repository.delete(role_id)
         return result.deleted_count == 1
+
+    async def add_permissions(self, role_id: str, permission_ids: list[str]):
+        result = await self.__repository.add_permissions(role_id, permission_ids)
+        if not result:
+            raise CustomGraphQLExceptionHelper("No se pudo asignar permisos al rol")
+        return True
+
+    async def remove_permissions(self, role_id: str, permission_ids: list[str]):
+        result = await self.__repository.remove_permissions(role_id, permission_ids)
+        if not result:
+            raise CustomGraphQLExceptionHelper("No se pudo remover permisos del rol")
+        return True

@@ -1,5 +1,4 @@
 from functools import wraps
-from bson import ObjectId
 
 from server.utils.auth_utils import verify_token
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper

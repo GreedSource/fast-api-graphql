@@ -11,6 +11,7 @@ from pydantic import (
 )
 
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
+from server.models.role_model import RoleItemModel
 from server.utils.auth_utils import hash_password
 
 
@@ -57,7 +58,12 @@ class RegisterModel(BaseModel):
 class UpdateUserModel(BaseModel):
     name: Optional[str] = Field(None, description="User name", min_length=3)
     lastname: Optional[str] = Field(None, description="User lastname", min_length=3)
-    email: EmailStr | None = Field(None, description="User email")
+    email: Optional[EmailStr] = Field(None, description="User email")
+    role: Optional[RoleItemModel] = Field(None, description="User role")
+
+    model_config = {
+        "populate_by_name": True  # permite pasar 'id' o '_id' al instanciar
+    }
 
 
 class UserItemModel(BaseModel):
@@ -65,6 +71,7 @@ class UserItemModel(BaseModel):
     name: str = Field(..., description="User name")
     lastname: str = Field(..., description="User lastname")
     email: EmailStr = Field(..., description="User email")
+    role: Optional[RoleItemModel] = Field(None, description="User role")
 
     @field_validator("id", mode="before")
     def validate_id(cls, v, info: ValidationInfo):

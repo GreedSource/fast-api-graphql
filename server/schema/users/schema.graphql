@@ -3,12 +3,14 @@ type User {
   name: String!
   lastname: String!
   email: String!
+  role: Role
 }
 
 input UpdateUserInput {
   id: ID!
   name: String
   lastname: String
+  roleId: ID
 }
 
 type UserResponse {

@@ -36,6 +36,10 @@ class RoleResolver:
         self.mutation.set_field("createRole", self.resolve_create)
         self.mutation.set_field("updateRole", self.resolve_update)
         self.mutation.set_field("deleteRole", self.resolve_delete)
+        self.mutation.set_field("addPermissionsToRole", self.resolve_add_permissions)
+        self.mutation.set_field(
+            "removePermissionsFromRole", self.resolve_remove_permissions
+        )
 
     # -----------------
     # Mutations
@@ -70,6 +74,28 @@ class RoleResolver:
             status=200,
             message="Role deleted successfully" if result else "Role not found",
             data=result,
+        )
+
+    @require_token
+    async def resolve_add_permissions(
+        self, _, __, roleId: str, permissionIds: list[str]
+    ):
+        await self.__service.add_permissions(roleId, permissionIds)
+        return ResponseModel[bool](
+            status=200,
+            message="Permissions added to role successfully",
+            data=True,
+        )
+
+    @require_token
+    async def resolve_remove_permissions(
+        self, _, __, roleId: str, permissionIds: list[str]
+    ):
+        await self.__service.remove_permissions(roleId, permissionIds)
+        return ResponseModel[bool](
+            status=200,
+            message="Permissions removed from role successfully",
+            data=True,
         )
 
     # -----------------

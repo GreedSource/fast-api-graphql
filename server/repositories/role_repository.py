@@ -35,6 +35,32 @@ class RoleRepository:
             {"$set": update_data},
         )
 
+    async def add_permissions(
+        self,
+        role_id: str,
+        permission_ids: list[str],
+    ):
+        object_ids = [ObjectId(pid) for pid in permission_ids]
+
+        return await self.__mongo.update_one(
+            "roles",
+            {"_id": ObjectId(role_id)},
+            {"$addToSet": {"permissions": {"$each": object_ids}}},
+        )
+
+    async def remove_permissions(
+        self,
+        role_id: str,
+        permission_ids: list[str],
+    ):
+        object_ids = [ObjectId(pid) for pid in permission_ids]
+
+        return await self.__mongo.update_one(
+            "roles",
+            {"_id": ObjectId(role_id)},
+            {"$pull": {"permissions": {"$in": object_ids}}},
+        )
+
     async def delete(self, role_id: str):
         return await self.__mongo.delete_one(
             "roles",

@@ -5,11 +5,22 @@ from typing import List, Optional
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 
 
+class AssignPermissionsModel(BaseModel):
+    role_id: str = Field(..., alias="roleId")
+    permission_ids: list[str] = Field(..., alias="permissionIds")
+
+
+class PermissionKeyModel(BaseModel):
+    action: str = Field(..., description="Action key")
+    type: str = Field(..., description="Module key")
+
+
 class RoleItemModel(BaseModel):
     id: Optional[str] = Field(None, alias="_id")
-    name: str = Field(..., description="Role name")
-    description: Optional[str] = Field(None, description="Role description")
-    active: Optional[bool] = Field(True, description="Indicates if the role is active")
+    name: str
+    description: Optional[str] = None
+    active: Optional[bool] = True
+    permissions: List[PermissionKeyModel] = Field(default_factory=list)
 
     @field_validator("id", mode="before")
     def validate_id(cls, v, info: ValidationInfo):
@@ -17,9 +28,7 @@ class RoleItemModel(BaseModel):
             raise CustomGraphQLExceptionHelper(f"{info.field_name} not valid.")
         return str(v)
 
-    model_config = {
-        "populate_by_name": True  # permite pasar 'id' o '_id' al instanciar
-    }
+    model_config = {"populate_by_name": True}
 
 
 # Crear un modelo que sea una lista de RoleItemModel
