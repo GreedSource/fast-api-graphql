@@ -1,7 +1,8 @@
-from ariadne import QueryType, MutationType
-from server.services.action_service import ActionService
+from ariadne import MutationType, QueryType
+
 from server.models.action_model import CreateActionModel
 from server.models.response_model import ResponseModel
+from server.services.action_service import ActionService
 
 
 class ActionResolver:

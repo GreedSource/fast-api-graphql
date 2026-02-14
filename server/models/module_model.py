@@ -1,5 +1,6 @@
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, RootModel, field_validator
-from typing import Optional, List
 
 
 class ModuleItemModel(BaseModel):
@@ -51,17 +52,11 @@ class CreateModuleModel(BaseModel):
 class UpdateModuleModel(BaseModel):
     id: str = Field(..., strip_whitespace=True, description="ID del módulo")
 
-    name: Optional[str] = Field(
-        default=None, min_length=1, max_length=100, strip_whitespace=True
-    )
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100, strip_whitespace=True)
 
-    key: Optional[str] = Field(
-        default=None, min_length=1, max_length=50, strip_whitespace=True
-    )
+    key: Optional[str] = Field(default=None, min_length=1, max_length=50, strip_whitespace=True)
 
-    description: Optional[str] = Field(
-        default=None, max_length=255, strip_whitespace=True
-    )
+    description: Optional[str] = Field(default=None, max_length=255, strip_whitespace=True)
 
     active: Optional[bool] = Field(default=None)
 

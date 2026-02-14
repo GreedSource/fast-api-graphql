@@ -1,5 +1,6 @@
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, RootModel, field_validator
-from typing import Optional, List
 
 
 class ActionItemModel(BaseModel):

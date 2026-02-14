@@ -1,13 +1,14 @@
 import re
 from typing import List, Optional
+
 from pydantic import (
     BaseModel,
+    EmailStr,
     Field,
     RootModel,
     ValidationInfo,
     field_validator,
     model_validator,
-    EmailStr,
 )
 
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
@@ -20,9 +21,7 @@ class RegisterModel(BaseModel):
     lastname: str = Field(..., description="User lastname", min_length=3)
     email: EmailStr = Field(..., description="User email")
     password: str = Field(..., description="Password")
-    confirm_password: str = Field(
-        ..., description="Password confirmation", alias="confirmPassword"
-    )
+    confirm_password: str = Field(..., description="Password confirmation", alias="confirmPassword")
 
     @model_validator(mode="before")
     @classmethod
@@ -40,9 +39,7 @@ class RegisterModel(BaseModel):
     @field_validator("password", "confirm_password")
     def strong_password(cls, v):
         # Al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo
-        pattern = (
-            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
-        )
+        pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
         if not re.match(pattern, v):
             raise CustomGraphQLExceptionHelper(
                 "La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula, "

@@ -1,6 +1,6 @@
 from server.decorators.singleton_decorator import singleton
+from server.models.action_model import ActionItemModel, CreateActionModel
 from server.repositories.action_repository import ActionRepository
-from server.models.action_model import CreateActionModel, ActionItemModel
 
 
 @singleton

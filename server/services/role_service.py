@@ -3,7 +3,6 @@ from server.decorators.singleton_decorator import singleton
 from server.helpers.custom_graphql_exception_helper import (
     CustomGraphQLExceptionHelper,
 )
-
 from server.helpers.logger_helper import LoggerHelper
 from server.models.role_model import (
     CreateRoleModel,
@@ -26,15 +25,10 @@ class RoleService:
 
     async def create(self, payload: CreateRoleModel):
         inserted_id = await self.__repository.create(payload.model_dump())
-        return RoleItemModel(
-            **payload.model_dump(), _id=str(inserted_id)
-        )  # Return the created role as a dict
+        return RoleItemModel(**payload.model_dump(), _id=str(inserted_id))  # Return the created role as a dict
 
     async def update(self, payload: UpdateRoleModel):
-        result = await self.__repository.update(
-            payload.id, payload.model_dump(exclude={"id"}, exclude_none=True)
-        )
-        LoggerHelper.info(f"Update result: {result}")
+        result = await self.__repository.update(payload.id, payload.model_dump(exclude={"id"}, exclude_none=True))
         if not result:
             raise CustomGraphQLExceptionHelper("No se encontró el rol para actualizar")
         return RoleItemModel(**result)  # Return the created role as a dict

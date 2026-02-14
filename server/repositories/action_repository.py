@@ -1,4 +1,5 @@
 from bson import ObjectId
+
 from server.db.mongo import get_mongo_db
 from server.decorators.singleton_decorator import singleton
 from server.helpers.mongo_helper import MongoHelper

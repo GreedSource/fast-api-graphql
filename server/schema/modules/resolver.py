@@ -1,7 +1,8 @@
-from ariadne import QueryType, MutationType
-from server.services.module_service import ModuleService
+from ariadne import MutationType, QueryType
+
 from server.models.module_model import CreateModuleModel, UpdateModuleModel
 from server.models.response_model import ResponseModel
+from server.services.module_service import ModuleService
 
 
 class ModuleResolver:

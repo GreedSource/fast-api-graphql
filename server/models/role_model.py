@@ -1,6 +1,7 @@
 # server/models/role_model.py
-from pydantic import BaseModel, Field, RootModel, ValidationInfo, field_validator
 from typing import List, Optional
+
+from pydantic import BaseModel, Field, RootModel, ValidationInfo, field_validator
 
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 

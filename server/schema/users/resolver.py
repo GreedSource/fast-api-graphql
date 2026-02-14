@@ -1,12 +1,10 @@
 # server/schema/users/resolver.py
-from ariadne import QueryType, MutationType
+from ariadne import MutationType, QueryType
 
-from server.decorators.singleton_decorator import singleton
 from server.decorators.require_token_decorator import require_token
 from server.helpers.logger_helper import LoggerHelper
 from server.models.response_model import ResponseModel
 from server.models.user_model import UpdateUserModel
-
 from server.services.user_service import UserService
 
 

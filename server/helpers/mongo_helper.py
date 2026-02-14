@@ -1,10 +1,9 @@
 from datetime import datetime, timezone
-import os
-from typing import Optional, List, Dict, Any, Set
+from typing import Any, Dict, List, Optional, Set
 
 from motor.motor_asyncio import (
-    AsyncIOMotorDatabase,
     AsyncIOMotorCollection,
+    AsyncIOMotorDatabase,
 )
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError, PyMongoError
@@ -103,9 +102,7 @@ class MongoHelper:
             result = await collection.insert_one(document, **kwargs)
             return result.inserted_id
         except DuplicateKeyError:
-            message = DUPLICATE_ERROR_MESSAGES.get(
-                collection_name, DEFAULT_DUPLICATE_MESSAGE
-            )
+            message = DUPLICATE_ERROR_MESSAGES.get(collection_name, DEFAULT_DUPLICATE_MESSAGE)
             raise CustomGraphQLExceptionHelper(
                 message,
                 HTTPErrorCode.CONFLICT,
@@ -198,9 +195,7 @@ class MongoHelper:
             return updated_doc  # devuelvo el documento actualizado como dict
 
         except DuplicateKeyError:
-            message = DUPLICATE_ERROR_MESSAGES.get(
-                collection_name, DEFAULT_DUPLICATE_MESSAGE
-            )
+            message = DUPLICATE_ERROR_MESSAGES.get(collection_name, DEFAULT_DUPLICATE_MESSAGE)
             raise CustomGraphQLExceptionHelper(
                 message,
                 HTTPErrorCode.CONFLICT,

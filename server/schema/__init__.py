@@ -1,14 +1,15 @@
-from ariadne import load_schema_from_path, make_executable_schema
 from pathlib import Path
+
+from ariadne import load_schema_from_path, make_executable_schema
 
 from server.schema.actions.action_resolver import ActionResolver
 from server.schema.modules.resolver import ModuleResolver
 from server.schema.permission.resolver import PermissionResolver
 
-from .hello.resolver import HelloResolver
-from .users.resolver import UserResolver
 from .auth.resolver import AuthResolver
+from .hello.resolver import HelloResolver
 from .roles.resolver import RoleResolver
+from .users.resolver import UserResolver
 
 __user_resolver = UserResolver()
 __hello_resolver = HelloResolver()

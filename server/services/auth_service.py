@@ -1,6 +1,6 @@
 # server/services/auth_service.py
-import os
 
+from server.config.settings import settings
 from server.decorators.singleton_decorator import singleton
 from server.helpers.custom_graphql_exception_helper import (
     CustomGraphQLExceptionHelper,
@@ -10,9 +10,9 @@ from server.helpers.mail_helper import MailHelper
 from server.models.user_model import UserItemModel
 from server.repositories.user_repository import UserRepository
 from server.utils.auth_utils import (
-    verify_password,
-    create_token,
     create_refresh_token,
+    create_token,
+    verify_password,
     verify_refresh_token,
 )
 
@@ -78,7 +78,7 @@ class AuthService:
 
         token = create_token({"email": email}, expires_minutes=60)
 
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        frontend_url = settings.FRONTEND_URL
         reset_url = f"{frontend_url}/reset-password/{token}"
 
         self.__mail_helper.send_email(

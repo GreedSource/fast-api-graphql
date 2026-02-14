@@ -1,15 +1,38 @@
+# =========================
+# STAGE 1 — LINT
+# =========================
+FROM python:3.12-slim-bookworm AS lint
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Instalar ruff solamente
+RUN pip install --no-cache-dir ruff
+
+# Copiar código
+COPY server/ server/
+COPY app.py .
+COPY requirements.txt .
+
+# Ejecutar lint (si falla, se detiene el build)
+RUN ruff check .
+
+# =========================
+# STAGE 2 — RUNTIME
+# =========================
 FROM python:3.12-slim-bookworm
 
-# --- Env ---
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV TZ=America/Merida
 
-# --- Virtualenv ---
+# Crear virtualenv
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# --- System deps ---
+# Instalar dependencias del sistema (solo lo necesario)
 RUN apt-get update && apt-get install --no-install-recommends -y \
     ca-certificates \
     libssl-dev \
@@ -18,19 +41,17 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     && update-ca-certificates --fresh \
     && rm -rf /var/lib/apt/lists/*
 
-# --- Workdir ---
 WORKDIR /app
 
-# --- Install deps ---
+# Instalar dependencias Python
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-# --- Copy source ---
+# Copiar código
 COPY server/ server/
 COPY app.py .
 
-# --- Expose ---
 EXPOSE 8000
 
-# --- Run ASGI ---
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

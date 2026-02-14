@@ -1,15 +1,14 @@
+from typing import List, Optional
+
 from bson import ObjectId
 from pydantic import BaseModel, Field, RootModel, ValidationInfo, field_validator
-from typing import List, Optional
 
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 
 
 class PermissionItemModel(BaseModel):
     id: Optional[str] = Field(default=None, alias="_id", description="Permission ID")
-    description: Optional[str] = Field(
-        default=None, description="Permission description"
-    )
+    description: Optional[str] = Field(default=None, description="Permission description")
     moduleId: str = Field(..., description="Permission type", alias="moduleId")
     actionId: str = Field(..., description="Permission action", alias="actionId")
 
@@ -37,9 +36,7 @@ class PermissionItemModel(BaseModel):
 class CreatePermissionModel(BaseModel):
     module_id: str = Field(..., alias="moduleId", description="Module ID")
     action_id: str = Field(..., alias="actionId", description="Action ID")
-    description: Optional[str] = Field(
-        default=None, description="Permission description"
-    )
+    description: Optional[str] = Field(default=None, description="Permission description")
 
     @field_validator("module_id", "action_id")
     @classmethod

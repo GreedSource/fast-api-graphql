@@ -1,4 +1,5 @@
-from ariadne import QueryType, MutationType
+from ariadne import MutationType, QueryType
+
 from server.models.permission_model import CreatePermissionModel
 from server.models.response_model import ResponseModel
 from server.services.permission_service import PermissionService

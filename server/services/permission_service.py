@@ -1,13 +1,12 @@
 from server.decorators.singleton_decorator import singleton
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 from server.helpers.logger_helper import LoggerHelper
-from server.repositories.permission_repository import PermissionRepository
 from server.models.permission_model import (
     CreatePermissionModel,
     PermissionItemModel,
     PermissionListModel,
 )
-
+from server.repositories.permission_repository import PermissionRepository
 from server.services.action_service import ActionService
 from server.services.module_service import ModuleService
 

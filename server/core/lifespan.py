@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-from server.db.mongo import get_mongo_db, close_mongo
-from server.helpers.mongo_helper import MongoHelper
+from server.db.mongo import close_mongo, get_mongo_db
 from server.helpers.logger_helper import LoggerHelper
+from server.helpers.mongo_helper import MongoHelper
 
 
 @asynccontextmanager

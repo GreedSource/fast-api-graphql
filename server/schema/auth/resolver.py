@@ -1,9 +1,13 @@
-from ariadne import QueryType, MutationType
+from ariadne import MutationType, QueryType
+from graphql import GraphQLResolveInfo
 
+from server.config.settings import settings
 from server.decorators.require_token_decorator import require_token
+from server.enums.http_error_code_enum import HTTPErrorCode
+from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 from server.helpers.logger_helper import LoggerHelper
-from server.models.user_model import RegisterModel
 from server.models.response_model import ResponseModel
+from server.models.user_model import RegisterModel
 from server.services.auth_service import AuthService
 
 
@@ -36,7 +40,7 @@ class AuthResolver:
     # Mutations
     # -----------------
 
-    async def resolve_register(self, _, info, input):
+    async def resolve_register(self, _, info: GraphQLResolveInfo, input):
         model = RegisterModel(**input)
 
         user = await self.auth_service.register(user_data=model.model_dump())
@@ -48,28 +52,71 @@ class AuthResolver:
         )
 
     # En tu AuthResolver
-    async def resolve_login(self, _, info, input):
-        response = await self.auth_service.login(
-            email=input["email"], password=input["password"]
+    async def resolve_login(self, _, info: GraphQLResolveInfo, input):
+        response = info.context["response"]
+
+        payload = await self.auth_service.login(email=input["email"], password=input["password"])
+        # Actualizar access token en cookie
+        response.set_cookie(
+            key=settings.ACCESS_COOKIE_NAME,
+            value=payload["accessToken"],
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=60 * 60,
         )
+        # Refresh token en cookie
+        response.set_cookie(
+            key=settings.REFRESH_COOKIE_NAME,
+            value=payload["refreshToken"],
+            httponly=True,
+            secure=True,  # HTTPS
+            samesite="lax",  # "none" si frontend en otro dominio
+            max_age=7 * 24 * 60 * 60,  # 7
+        )
+
         return ResponseModel(
             status=200,
             message="Login successful",
-            data=response,
+            data=payload,
         )
 
-    async def resolve_refresh_token(self, _, info, refreshToken):
-        response = await self.auth_service.refresh_token(
-            refresh_token=refreshToken,
+    async def resolve_refresh_token(self, _, info: GraphQLResolveInfo, refreshToken=None):
+        request = info.context["request"]
+        response = info.context["response"]
+
+        # 1️⃣ Prioridad: argumento GraphQL
+        token = refreshToken
+
+        # 2️⃣ Fallback: cookie
+        if not token:
+            token = request.cookies.get(settings.REFRESH_COOKIE_NAME)
+
+        if not token:
+            raise CustomGraphQLExceptionHelper(
+                "Refresh token no proporcionado",
+                HTTPErrorCode.UNAUTHORIZED,
+            )
+
+        result = await self.auth_service.refresh_token(token)
+
+        # Nuevo access token → cookie
+        response.set_cookie(
+            key=settings.ACCESS_COOKIE_NAME,
+            value=result["accessToken"],
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=60 * 60,
         )
 
         return ResponseModel(
             status=200,
             message="Token refreshed",
-            data=response,
+            data=result,
         )
 
-    async def resolve_recover_password(self, _, info, email):
+    async def resolve_recover_password(self, _, info: GraphQLResolveInfo, email):
         request = info.context["request"]
 
         result = await self.auth_service.recover_password(
@@ -88,7 +135,7 @@ class AuthResolver:
     # -----------------
 
     @require_token
-    async def resolve_profile(self, _, info):
+    async def resolve_profile(self, _, info: GraphQLResolveInfo):
         return ResponseModel(
             status=200,
             message="Profile retrieved",

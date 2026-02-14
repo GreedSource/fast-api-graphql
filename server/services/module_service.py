@@ -1,10 +1,10 @@
 from server.decorators.singleton_decorator import singleton
-from server.repositories.module_repository import ModuleRepository
 from server.models.module_model import (
     CreateModuleModel,
-    UpdateModuleModel,
     ModuleItemModel,
+    UpdateModuleModel,
 )
+from server.repositories.module_repository import ModuleRepository
 
 
 @singleton
@@ -17,9 +17,7 @@ class ModuleService:
         return ModuleItemModel(**payload.model_dump(), _id=str(inserted_id))
 
     async def update(self, payload: UpdateModuleModel):
-        result = await self.__repository.update(
-            payload.id, payload.model_dump(exclude={"id"}, exclude_none=True)
-        )
+        result = await self.__repository.update(payload.id, payload.model_dump(exclude={"id"}, exclude_none=True))
         return ModuleItemModel(**result)
 
     async def get_all(self):
