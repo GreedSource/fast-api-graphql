@@ -1,15 +1,13 @@
-# server/resolvers/user_resolver.py
-from ariadne import QueryType, MutationType
+# server/schema/users/resolver.py
+from ariadne import MutationType, QueryType
 
-from server.decorators.singleton_decorator import singleton
 from server.decorators.require_token_decorator import require_token
 from server.helpers.logger_helper import LoggerHelper
+from server.models.response_model import ResponseModel
 from server.models.user_model import UpdateUserModel
-
 from server.services.user_service import UserService
 
 
-@singleton
 class UserResolver:
     def __init__(self):
         self.query = QueryType()
@@ -40,11 +38,21 @@ class UserResolver:
 
     @require_token
     async def resolve_users(self, _, info):
-        return await self.user_service.get_users()
+        response = await self.user_service.get_users()
+        return ResponseModel(
+            status=200,
+            message="Users fetched successfully",
+            data=response,
+        )
 
     @require_token
     async def resolve_user(self, _, info, id):
-        return await self.user_service.get_user(id)
+        user = await self.user_service.get_user(id)
+        return ResponseModel(
+            status=200,
+            message="User fetched successfully",
+            data=user,
+        )
 
     # -----------------
     # Mutations
@@ -55,11 +63,20 @@ class UserResolver:
         model = UpdateUserModel(**input)
         update_data = model.model_dump(exclude_unset=True)
 
-        return await self.user_service.update_user(input["id"], update_data)
+        updated = await self.user_service.update_user(input["id"], update_data)
+        return ResponseModel(
+            status=200,
+            message="User updated successfully",
+            data=updated,
+        )
 
     @require_token
     async def resolve_delete_user(self, _, info, id):
-        return await self.user_service.delete_user(id)
+        return ResponseModel(
+            status=200,
+            message="User deleted successfully",
+            data=await self.user_service.delete_user(id),
+        )
 
     # -----------------
     # Export

@@ -1,16 +1,19 @@
+import json
 import logging
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse
+
 from ariadne import graphql
 from ariadne.explorer import ExplorerGraphiQL
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 
+from server.config.settings import settings
 from server.core.lifespan import lifespan
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.logger_helper import LoggerHelper
+from server.middlewares.cookie_logging_middleware import CookieLoggingMiddleware
 from server.schema import schema
 from server.utils.custom_error_formatter_utils import custom_format_error
-from server.helpers.mail_helper import MailHelper
 
 # Desactivar logs ruidosos de ariadne
 logging.getLogger("ariadne").setLevel(logging.CRITICAL)
@@ -19,20 +22,27 @@ explorer_html = ExplorerGraphiQL().html(None)
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="GraphQL API", lifespan=lifespan)
+    app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan)
+
+    # Middleware de logging de cookies
+    app.add_middleware(CookieLoggingMiddleware)
+
+    # Middleware para hosts confiables
+    # app.add_middleware(
+    #     TrustedHostMiddleware,
+    #     allowed_hosts=["localhost", "127.0.0.1", "tu-dominio.com"],
+    # )
 
     # CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-    # Inicializar MailHelper
-    # MailHelper().init_app()
-
+    # Rutas
     @app.get("/")
     async def root():
         return {"status": "Ok", "message": "Welcome!!"}
@@ -45,16 +55,21 @@ def create_app() -> FastAPI:
     async def graphql_explorer():
         return HTMLResponse(explorer_html)
 
+    # GraphQL endpoint
     @app.post("/graphql")
-    async def graphql_server(request: Request):
+    async def graphql_server(request: Request, response: Response):
         data = await request.json()
         operation_name = data.get("operationName", "unnamed")
+
         LoggerHelper.info(f"GraphQL operation: {operation_name}")
 
         success, result = await graphql(
             schema,
             data,
-            context_value={"request": request},
+            context_value={
+                "request": request,
+                "response": response,
+            },
             debug=app.debug,
             error_formatter=custom_format_error,
         )
@@ -71,7 +86,9 @@ def create_app() -> FastAPI:
                 if status_code != HTTPErrorCode.BAD_REQUEST.status_code:
                     break
 
-        return JSONResponse(content=result, status_code=status_code)
+        response.status_code = status_code
+        response.body = json.dumps(result).encode()
+        return response
 
     return app
 

@@ -1,9 +1,18 @@
+"""
+Payload de autenticación
+"""
+type AuthPayload {
+  user: User!
+  accessToken: String!
+  refreshToken: String!
+}
+
 input RegisterInput {
   name: String!
   lastname: String!
   email: String!
   password: String!
-  confirm_password: String!
+  confirmPassword: String!
 }
 
 input LoginInput {
@@ -12,22 +21,31 @@ input LoginInput {
 }
 
 type AuthResponse {
-  accessToken: String!
-  refreshToken: String!
-  user: User!
+  status: Int!
+  message: String
+  data: AuthPayload!
 }
 
-type AccessTokenResponse {
-  accessToken: String!
+type BooleanResponse {
+  status: Int!
+  message: String
+  data: Boolean!
 }
 
-type Mutation {
+type ProfileResponse {
+  status: Int!
+  message: String
+  data: User!
+}
+
+extend type Mutation {
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
-  recoverPassword(email: String!): Boolean!
-  refreshToken(refreshToken: String!): AccessTokenResponse!
+  refreshToken(refreshToken: String!): AuthResponse!
+  recoverPassword(email: String!): BooleanResponse!
+  logout: BooleanResponse!
 }
 
 extend type Query {
-  profile: User!
+  profile: ProfileResponse!
 }

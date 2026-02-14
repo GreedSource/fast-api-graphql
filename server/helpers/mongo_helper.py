@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
-import os
-from typing import Optional, List, Dict, Any, Set
+from typing import Any, Dict, List, Optional, Set
 
 from motor.motor_asyncio import (
-    AsyncIOMotorDatabase,
     AsyncIOMotorCollection,
+    AsyncIOMotorDatabase,
 )
+from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from server.constants.error_messages import (
@@ -102,9 +102,7 @@ class MongoHelper:
             result = await collection.insert_one(document, **kwargs)
             return result.inserted_id
         except DuplicateKeyError:
-            message = DUPLICATE_ERROR_MESSAGES.get(
-                collection_name, DEFAULT_DUPLICATE_MESSAGE
-            )
+            message = DUPLICATE_ERROR_MESSAGES.get(collection_name, DEFAULT_DUPLICATE_MESSAGE)
             raise CustomGraphQLExceptionHelper(
                 message,
                 HTTPErrorCode.CONFLICT,
@@ -172,20 +170,38 @@ class MongoHelper:
     ):
         collection = self.get_collection(collection_name)
 
+        # Aseguramos que siempre se actualice updated_at
         update.setdefault("$set", {})
         update["$set"]["updated_at"] = datetime.now(timezone.utc)
 
         try:
-            return await collection.update_one(filter_, update, upsert=upsert, **kwargs)
-        except DuplicateKeyError:
-            message = DUPLICATE_ERROR_MESSAGES.get(
-                collection_name, DEFAULT_DUPLICATE_MESSAGE
+            # Usamos find_one_and_update para devolver el documento actualizado
+            updated_doc = await collection.find_one_and_update(
+                filter_,
+                update,
+                upsert=upsert,
+                return_document=ReturnDocument.AFTER,  # devuelve después de actualizar
+                **kwargs,
             )
+
+            if not updated_doc:
+                # Si no se encontró nada
+                raise CustomGraphQLExceptionHelper(
+                    "Documento no encontrado.",
+                    HTTPErrorCode.NOT_FOUND,
+                    details={"collection": collection_name},
+                )
+
+            return updated_doc  # devuelvo el documento actualizado como dict
+
+        except DuplicateKeyError:
+            message = DUPLICATE_ERROR_MESSAGES.get(collection_name, DEFAULT_DUPLICATE_MESSAGE)
             raise CustomGraphQLExceptionHelper(
                 message,
                 HTTPErrorCode.CONFLICT,
                 details={"collection": collection_name},
             )
+
         except PyMongoError as e:
             raise CustomGraphQLExceptionHelper(
                 f"Error al actualizar documento: {e}",
@@ -206,4 +222,38 @@ class MongoHelper:
             raise CustomGraphQLExceptionHelper(
                 f"Error al eliminar documento: {e}",
                 HTTPErrorCode.BAD_REQUEST,
+            )
+
+    # --------------------------------------------------
+    # Aggregation
+    # --------------------------------------------------
+
+    async def aggregate(
+        self,
+        collection_name: str,
+        pipeline: List[Dict[str, Any]],
+        allow_disk_use: bool = False,
+        **kwargs,
+    ) -> List[Dict[str, Any]]:
+        """
+        Ejecuta un aggregation pipeline y devuelve la lista de documentos.
+        """
+        collection = self.get_collection(collection_name)
+
+        try:
+            cursor = collection.aggregate(
+                pipeline,
+                allowDiskUse=allow_disk_use,
+                **kwargs,
+            )
+            return [doc async for doc in cursor]
+
+        except PyMongoError as e:
+            raise CustomGraphQLExceptionHelper(
+                f"Error en aggregation: {e}",
+                HTTPErrorCode.BAD_REQUEST,
+                details={
+                    "collection": collection_name,
+                    "pipeline": pipeline,
+                },
             )

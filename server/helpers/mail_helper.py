@@ -1,13 +1,13 @@
-import os
 import smtplib
 from email.message import EmailMessage
 from typing import List, Optional
 
 from fastapi import BackgroundTasks
 
+from server.config.settings import settings
 from server.decorators.singleton_decorator import singleton
-from server.helpers.logger_helper import LoggerHelper
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
+from server.helpers.logger_helper import LoggerHelper
 
 
 @singleton
@@ -19,11 +19,11 @@ class MailHelper:
         if self._initialized:
             return
 
-        self.mail_server = os.environ.get("MAIL_SERVER", "smtp.mailgun.org")
-        self.mail_port = int(os.environ.get("MAIL_PORT", 587))
-        self.mail_username = os.environ.get("MAIL_USERNAME")
-        self.mail_password = os.environ.get("MAIL_PASSWORD")
-        self.default_sender = os.environ.get("MAIL_DEFAULT_SENDER")
+        self.mail_server = settings.MAIL_SERVER
+        self.mail_port = settings.MAIL_PORT
+        self.mail_username = settings.MAIL_USERNAME
+        self.mail_password = settings.MAIL_PASSWORD
+        self.default_sender = settings.MAIL_DEFAULT_SENDER
 
         self._initialized = True
         LoggerHelper.info("MailHelper initialized (FastAPI)")

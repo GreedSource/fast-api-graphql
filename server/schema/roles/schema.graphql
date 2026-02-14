@@ -1,0 +1,60 @@
+# server/schema/roles/schema.graphql
+type RolePermission {
+  type: String!
+  action: String!
+}
+
+type Role {
+  id: ID!
+  name: String!
+  description: String
+  active: Boolean!
+  permissions: [RolePermission!]!
+}
+
+input CreateRoleInput {
+  name: String!
+  description: String
+  active: Boolean = true
+}
+
+input UpdateRoleInput {
+  id: ID!
+  name: String
+  description: String
+  active: Boolean
+}
+
+type RoleResponse {
+  status: Int!
+  message: String
+  data: Role
+}
+
+type RoleListResponse {
+  status: Int!
+  message: String
+  data: [Role!]!
+}
+
+type RoleResponseBoolean {
+  status: Int!
+  message: String
+  data: Boolean
+}
+
+extend type Query {
+  roles: RoleListResponse!
+  role(id: ID!): RoleResponse!
+}
+
+extend type Mutation {
+  createRole(input: CreateRoleInput!): RoleResponse!
+  updateRole(input: UpdateRoleInput!): RoleResponse!
+  deleteRole(id: ID!): RoleResponseBoolean!
+  addPermissionsToRole(roleId: ID!, permissionIds: [ID!]!): RoleResponseBoolean!
+  removePermissionsFromRole(
+    roleId: ID!
+    permissionIds: [ID!]!
+  ): RoleResponseBoolean!
+}

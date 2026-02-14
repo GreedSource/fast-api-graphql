@@ -3,23 +3,40 @@ type User {
   name: String!
   lastname: String!
   email: String!
-  isAdmin: Boolean!
-}
-
-extend type Query {
-  users: [User!]!
-  user(id: ID!): User
+  role: Role
 }
 
 input UpdateUserInput {
   id: ID!
-  name: String!
-  lastname: String!
-  email: String
-  isAdmin: Boolean
+  name: String
+  lastname: String
+  roleId: ID
+}
+
+type UserResponse {
+  status: Int!
+  message: String
+  data: User!
+}
+
+type UsersResponse {
+  status: Int!
+  message: String
+  data: [User!]!
+}
+
+type UserResponseBoolean {
+  status: Int!
+  message: String
+  data: Boolean!
 }
 
 extend type Mutation {
-  updateUser(input: UpdateUserInput!): User!
-  deleteUser(id: ID!): Boolean!
+  updateUser(input: UpdateUserInput!): UserResponse!
+  deleteUser(id: ID!): UserResponseBoolean!
+}
+
+extend type Query {
+  users: UsersResponse!
+  user(id: ID!): UserResponse
 }

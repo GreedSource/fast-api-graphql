@@ -1,0 +1,44 @@
+type Module {
+  id: ID!
+  name: String!
+  key: String!
+  description: String
+  active: Boolean!
+}
+
+input CreateModuleInput {
+  name: String!
+  key: String!
+  description: String
+  active: Boolean = true
+}
+
+input UpdateModuleInput {
+  id: ID!
+  name: String
+  key: String
+  description: String
+  active: Boolean
+}
+
+type ModuleResponse {
+  status: Int!
+  message: String!
+  data: Module
+}
+
+type ModuleListResponse {
+  status: Int!
+  message: String!
+  data: [Module!]!
+}
+
+extend type Query {
+  modules: ModuleListResponse!
+  module(id: ID!): ModuleResponse!
+}
+
+extend type Mutation {
+  createModule(input: CreateModuleInput!): ModuleResponse!
+  updateModule(input: UpdateModuleInput!): ModuleResponse!
+}

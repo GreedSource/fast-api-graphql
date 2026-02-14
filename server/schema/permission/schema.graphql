@@ -1,0 +1,33 @@
+type Permission {
+  id: ID!
+  description: String
+  moduleId: String! # module.key
+  actionId: String! # action.key
+}
+
+input CreatePermissionInput {
+  moduleId: String!
+  actionId: String!
+  description: String
+}
+
+type PermissionResponse {
+  status: Int!
+  message: String
+  data: Permission
+}
+
+type PermissionListResponse {
+  status: Int!
+  message: String
+  data: [Permission!]!
+}
+
+extend type Query {
+  permissions: PermissionListResponse!
+}
+
+extend type Mutation {
+  createPermission(input: CreatePermissionInput!): PermissionResponse!
+  deletePermission(id: ID!): Boolean!
+}
