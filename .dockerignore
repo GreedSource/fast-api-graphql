@@ -1,21 +1,34 @@
-# Entorno virtual
+# =========================
+# Entornos virtuales
+# =========================
 .venv/
 venv/
 ENV/
 env/
 
-# Archivos Python compilados
+# =========================
+# Python
+# =========================
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Archivos de logs
+# =========================
+# Logs
+# =========================
 *.log
 
-# Configuración de usuario de VSCode
+# =========================
+# IDEs / editores
+# =========================
 .vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
 
-# Archivos de pruebas / cobertura
+# =========================
+# Testing / coverage
+# =========================
 .coverage
 htmlcov/
 .tox/
@@ -23,40 +36,57 @@ nosetests.xml
 test-results/
 .pytest_cache/
 
-# Archivos de Jupyter
+# =========================
+# Jupyter
+# =========================
 .ipynb_checkpoints/
 
-# Archivos de entorno y configuración local
+# =========================
+# Variables de entorno (CRÍTICO)
+# =========================
 .env
 *.env
 .env.*
 server/.env
 server/*.env
 
-# Archivos del sistema operativo
+# =========================
+# Sistema operativo
+# =========================
 .DS_Store
 Thumbs.db
 
-# Archivos de Docker creados en el build
+# =========================
+# Docker / build
+# =========================
 *.pid
 *.tar
-docker-compose.override.yml
+docker-compose*
+Dockerfile*
+.dockerignore
 
-# Salidas de build temporales
+# =========================
+# Builds Python
+# =========================
 dist/
 build/
 *.egg-info/
 
-# Mongo dumps u otros datos temporales de base de datos
+# =========================
+# Base de datos / dumps
+# =========================
 dump/
 *.bson
 *.mongodump
 *.json
 
-# Archivos de IDEs
-.idea/
-*.sublime-workspace
-*.sublime-project
-
-# Archivos del runtime
+# =========================
+# SQLite
+# =========================
 *.sqlite3
+
+# =========================
+# Git (importante si build context = root)
+# =========================
+.git/
+.gitignore

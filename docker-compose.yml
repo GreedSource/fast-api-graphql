@@ -2,18 +2,39 @@ services:
   api:
     build:
       context: .
-      dockerfile: dockerfile
+      dockerfile: Dockerfile
     container_name: graphql_api
     restart: unless-stopped
+
+    # 🔥 Volúmenes optimizados
     volumes:
-      - ./app.py:/app/app.py
-      - ./server:/app/server
-    ports:
-      - '5000:5000'
+      - ./app.py:/app/app.py:delegated
+      - ./server:/app/server:delegated
+
+    # 🔥 Variables explícitas
+    environment:
+      - PORT=5000
+      - PYTHONUNBUFFERED=1
+
     env_file:
       - .env
+
+    ports:
+      - '5000:5000'
+
+    # 🔥 Mejor comando (reload estable)
     command: >
-      uvicorn app:app
+      sh -c "uvicorn app:app
       --host 0.0.0.0
-      --port 5000
+      --port ${PORT}
       --reload
+      --reload-dir /app"
+
+    # 🔥 Mejor shutdown handling
+    stop_signal: SIGINT
+
+    # 🔥 TTY para logs más limpios
+    tty: true
+
+    # 🔥 stdin abierto (útil para debug)
+    stdin_open: true
