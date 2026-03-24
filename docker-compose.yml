@@ -9,11 +9,28 @@ services:
       - ./app.py:/app/app.py
       - ./server:/app/server
     ports:
-      - '5000:5000'
+      - '$PORT:$PORT'
     env_file:
       - .env
+    depends_on:
+      - mongo
     command: >
       uvicorn app:app
       --host 0.0.0.0
-      --port 5000
+      --port $PORT
       --reload
+
+  mongo:
+    image: mongo:7
+    container_name: mongodb
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+
+volumes:
+  mongo_data:
