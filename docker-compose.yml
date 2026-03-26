@@ -5,6 +5,7 @@ services:
       dockerfile: dockerfile
     container_name: graphql_api
     restart: unless-stopped
+    image: graphql_api:latest
     volumes:
       - ./app.py:/app/app.py
       - ./server:/app/server
@@ -12,6 +13,8 @@ services:
       - '$PORT:$PORT'
     env_file:
       - .env
+    environment:
+      - WATCHFILES_FORCE_POLLING=true
     depends_on:
       - mongo
     command: >
