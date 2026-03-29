@@ -40,7 +40,6 @@ def require_token(resolver):
 
         # Verificar access token
         payload = verify_token(token)
-
         user_id = payload.get("id")
         if not user_id:
             raise CustomGraphQLExceptionHelper(

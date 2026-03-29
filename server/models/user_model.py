@@ -1,6 +1,7 @@
 import re
 from typing import List, Optional
 
+from gridfs.grid_file import ObjectId
 from pydantic import (
     BaseModel,
     EmailStr,
@@ -72,7 +73,7 @@ class UserItemModel(BaseModel):
 
     @field_validator("id", mode="before")
     def validate_id(cls, v, info: ValidationInfo):
-        if not v:
+        if not ObjectId.is_valid(v):
             raise CustomGraphQLExceptionHelper(f"{info.field_name} not valid.")
         return str(v)
 

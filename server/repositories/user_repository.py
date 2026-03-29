@@ -103,10 +103,20 @@ class UserRepository:
 
     async def aggregate_user_with_role_permissions(self, user_id: str):
         pipeline = [
-            # 1️⃣ Convertir role_id (string) → ObjectId
-            {"$addFields": {"roleIdObj": {"$toObjectId": "$role_id"}}},
-            # 2️⃣ Filtrar usuario
+            # 1️⃣ Match usuario primero (mejor performance)
             {"$match": {"_id": ObjectId(user_id)}},
+            # 2️⃣ Convertir role_id → ObjectId (solo si existe)
+            {
+                "$addFields": {
+                    "roleIdObj": {
+                        "$cond": {
+                            "if": {"$ifNull": ["$role_id", False]},
+                            "then": {"$toObjectId": "$role_id"},
+                            "else": None,
+                        }
+                    }
+                }
+            },
             # 3️⃣ Lookup del rol
             {
                 "$lookup": {
@@ -116,39 +126,41 @@ class UserRepository:
                     "as": "role",
                 }
             },
+            # 4️⃣ Unwind role
             {"$unwind": {"path": "$role", "preserveNullAndEmptyArrays": True}},
-            # 4️⃣ Lookup de permisos
+            # 5️⃣ Lookup permisos (usar campo temporal)
             {
                 "$lookup": {
                     "from": "permissions",
                     "localField": "role.permissions",
                     "foreignField": "_id",
-                    "as": "role.permissions",
+                    "as": "permissions_docs",
                 }
             },
-            # 5️⃣ Lookup módulos y actions
+            # 6️⃣ Lookup módulos
             {
                 "$lookup": {
                     "from": "modules",
-                    "localField": "role.permissions.module_id",
+                    "localField": "permissions_docs.module_id",
                     "foreignField": "_id",
                     "as": "modules",
                 }
             },
+            # 7️⃣ Lookup actions
             {
                 "$lookup": {
                     "from": "actions",
-                    "localField": "role.permissions.action_id",
+                    "localField": "permissions_docs.action_id",
                     "foreignField": "_id",
                     "as": "actions",
                 }
             },
-            # 6️⃣ Mapear permisos (action + type)
+            # 8️⃣ Mapear permisos
             {
                 "$addFields": {
-                    "role.permissions": {
+                    "mapped_permissions": {
                         "$map": {
-                            "input": "$role.permissions",
+                            "input": {"$ifNull": ["$permissions_docs", []]},
                             "as": "perm",
                             "in": {
                                 "action": {
@@ -199,27 +211,38 @@ class UserRepository:
                                 },
                             },
                         }
-                    },
-                    # ✅ CAST DE IDS A STRING
-                    "_id": {"$toString": "$_id"},
-                    "role._id": {"$toString": "$role._id"},
+                    }
                 }
             },
-            # 7️⃣ Project final (limpio)
+            # 9️⃣ Construir role correctamente
+            {
+                "$addFields": {
+                    "role": {
+                        "$cond": {
+                            "if": {"$not": ["$role"]},
+                            "then": None,
+                            "else": {
+                                "_id": {"$toString": "$role._id"},
+                                "name": "$role.name",
+                                "permissions": "$mapped_permissions",
+                            },
+                        }
+                    },
+                    "_id": {"$toString": "$_id"},
+                }
+            },
+            # 🔟 Project limpio
             {
                 "$project": {
-                    # USER
                     "password": 0,
                     "role_id": 0,
-                    "created_at": 0,
-                    "updated_at": 0,
-                    # ROLE
-                    "role.created_at": 0,
-                    "role.updated_at": 0,
-                    # TEMPORALES
                     "roleIdObj": 0,
+                    "permissions_docs": 0,
                     "modules": 0,
                     "actions": 0,
+                    "mapped_permissions": 0,
+                    "created_at": 0,
+                    "updated_at": 0,
                 }
             },
         ]
