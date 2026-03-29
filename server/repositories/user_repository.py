@@ -46,7 +46,17 @@ class UserRepository:
             {
                 "$addFields": {
                     "_id": {"$toString": "$_id"},
-                    "role._id": {"$toString": "$role._id"},
+                    "role": {
+                        "$cond": [
+                            {"$ifNull": ["$role", False]},
+                            {
+                                "_id": {"$toString": "$role._id"},
+                                "name": "$role.name",
+                                "description": "$role.description",
+                            },
+                            None,
+                        ]
+                    },
                 }
             },
             {

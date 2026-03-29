@@ -7,8 +7,8 @@ services:
     restart: unless-stopped
     image: graphql_api:latest
     volumes:
-      - ./app.py:/app/app.py
-      - ./server:/app/server
+      - ./app.py:/app/app.py:Z
+      - ./server:/app/server:Z
     ports:
       - '$PORT:$PORT'
     env_file:

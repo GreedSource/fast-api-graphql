@@ -20,7 +20,7 @@ class UserService:
 
     async def get_users(self):
         users = await self.__repository.aggregate_users_with_roles()
-        return UserListModel.model_validate(users).model_dump(by_alias=False)
+        return UserListModel(users).model_dump(by_alias=False)
 
     async def get_user(self, user_id: str):
         user = await self.__repository.aggregate_user_with_role_permissions(user_id)
