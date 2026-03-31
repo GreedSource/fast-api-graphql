@@ -51,7 +51,11 @@ RUN pip install --upgrade pip \
 # Copiar código
 COPY server/ server/
 COPY app.py .
+COPY manage.py .
+
+# Se espera que RUN_SEEDERS se provea desde entorno o .env (no se fuerza aquí)
+# ENV RUN_SEEDERS=false
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "python manage.py migrate && python manage.py seed-all && uvicorn app:app --host 0.0.0.0 --port 8000"]

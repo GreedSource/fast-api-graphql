@@ -8,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from server.config.settings import settings
-from server.core.lifespan import lifespan
+
+# from server.core.lifespan import lifespan
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.logger_helper import LoggerHelper
 from server.middlewares.cookie_logging_middleware import CookieLoggingMiddleware
@@ -22,16 +23,10 @@ explorer_html = ExplorerGraphiQL().html(None)
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan)
+    app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
 
     # Middleware de logging de cookies
     app.add_middleware(CookieLoggingMiddleware)
-
-    # Middleware para hosts confiables
-    # app.add_middleware(
-    #     TrustedHostMiddleware,
-    #     allowed_hosts=["localhost", "127.0.0.1", "tu-dominio.com"],
-    # )
 
     # CORS
     app.add_middleware(

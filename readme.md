@@ -173,6 +173,30 @@ pip install -r requirements.txt
 python app.py
 ```
 
+## 🧱 Migraciones y Seeders
+
+Este proyecto ahora incluye un pequeño sistema de migraciones para MongoDB y un seeder de usuarios:
+
+- `manage.py migrate`: aplica migraciones (`migrations` collection + índices + validadores JSON Schema)
+- `manage.py seed-modules`: crea módulos básicos
+- `manage.py seed-actions`: crea acciones básicas
+- `manage.py seed-permissions`: crea permisos básicos a partir de módulos y acciones existentes
+- `manage.py seed-roles`: crea roles admin/user
+- `manage.py seed-users`: crea users admin/user base
+- `manage.py seed-all`: ejecuta migraciones + todos los seeders
+- `manage.py status`: lista migraciones aplicadas
+
+Uso:
+
+```bash
+# Desde la raíz del proyecto
+python manage.py migrate
+python manage.py seed-users
+python manage.py status
+```
+
+> Nota: Las migraciones aplican esquema utilizando `collMod` y `create_collection` con `validationAction="error"` para que Mongo valide los campos.
+
 ## ⚙️ Configuration
 
 When using Docker Compose, the application is pre-configured and ready to run out of the box.
@@ -199,6 +223,11 @@ SENDER_EMAIL=noreply@example.com
 # Environment
 ENVIRONMENT=development
 DEBUG=True
+
+# Seeders control
+# Si true, manage.py seed-all correrá los seeders
+# Si false, solo corre migraciones (ó corre cada seeder explícito si se quiere)
+RUN_SEEDERS=false
 ```
 
 ## 🏃 Running the Application
@@ -274,6 +303,19 @@ docker build -t flask-graphql:latest .
 ### Run Docker Container (Manual)
 
 ```bash
+# Con base en la nueva Dockerfile, migraciones se ejecutan automáticamente en start
+# y seeders se ejecutan solo si RUN_SEEDERS=true
+
+# Sin seeders:
+docker run -e RUN_SEEDERS=false -p 5000:8000 flask-graphql:latest
+
+# Con seeders:
+docker run -e RUN_SEEDERS=true -p 5000:8000 flask-graphql:latest
+
+# Si deseas solo migraciones:
+docker run -e RUN_SEEDERS=false -p 5000:8000 flask-graphql:latest
+
+```
 docker run -p 5000:5000 \
   -e MONGODB_URL=mongodb://mongo:27017 \
   -e SECRET_KEY=your-secret \

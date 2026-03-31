@@ -9,6 +9,7 @@ services:
     volumes:
       - ./app.py:/app/app.py:Z
       - ./server:/app/server:Z
+      - ./manage.py:/app/manage.py:Z
     ports:
       - '$PORT:$PORT'
     env_file:
@@ -18,10 +19,7 @@ services:
     depends_on:
       - mongo
     command: >
-      uvicorn app:app
-      --host 0.0.0.0
-      --port $PORT
-      --reload
+      sh -c "python manage.py migrate && python manage.py seed-all && uvicorn app:app --host 0.0.0.0 --port $PORT --reload"
 
   mongo:
     image: mongo:7

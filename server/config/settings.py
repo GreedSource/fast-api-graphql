@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     FRONTEND_URL: str
 
     # ======================
+    # RUN CONTROL
+    # ======================
+    RUN_SEEDERS: bool = False
+
+    # ======================
     # CORS
     # ======================
     CORS_ORIGINS: list[str] = []
