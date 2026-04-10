@@ -1,26 +1,39 @@
-from ariadne import format_error as default_format_error
 from graphql import GraphQLError
 from pydantic import ValidationError
 
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
+from server.helpers.logger_helper import LoggerHelper
 
 
 def custom_format_error(error: GraphQLError, debug: bool = False):
-    if isinstance(error.original_error, ValidationError):
+    original = error.original_error
+
+    # 🔥 LOG CRUDO (esto es lo que quieres ver)
+    LoggerHelper.info("🔥 RAW ERROR:", repr(original))
+
+    if isinstance(original, ValidationError):
         return {
             "message": "Error de validación",
             "extensions": {
                 "code": "BAD_USER_INPUT",
-                "fields": error.original_error.errors(),
+                "fields": original.errors(),
             },
         }
 
-    if isinstance(error.original_error, CustomGraphQLExceptionHelper):
+    if isinstance(original, CustomGraphQLExceptionHelper):
         return {
-            "message": error.original_error.message,
+            "message": original.message,
             "extensions": {
-                "code": error.original_error.code,
-                "details": error.original_error.details,
+                "code": original.code,
+                "details": original.details,
             },
         }
-    return default_format_error(error, debug)
+
+    # 🔥 Aquí metes el raw message
+    return {
+        "message": str(original) if original else error.message,
+        "extensions": {
+            "code": "INTERNAL_ERROR",
+            "debug": repr(original) if debug else None,
+        },
+    }

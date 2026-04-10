@@ -1,4 +1,4 @@
-# Flask GraphQL API
+# FastAPI GraphQL API
 
 A modern GraphQL API built with FastAPI, Ariadne, and MongoDB. This project implements a role-based access control (RBAC) system with JWT authentication, user management, permissions, and role administration.
 
@@ -297,7 +297,7 @@ The Docker setup includes:
 ### Build Docker Image (Manual)
 
 ```bash
-docker build -t flask-graphql:latest .
+docker build -t fastapi-graphql:latest .
 ```
 
 ### Run Docker Container (Manual)
@@ -307,19 +307,19 @@ docker build -t flask-graphql:latest .
 # y seeders se ejecutan solo si RUN_SEEDERS=true
 
 # Sin seeders:
-docker run -e RUN_SEEDERS=false -p 5000:8000 flask-graphql:latest
+docker run -e RUN_SEEDERS=false -p 5000:8000 fastapi-graphql:latest
 
 # Con seeders:
-docker run -e RUN_SEEDERS=true -p 5000:8000 flask-graphql:latest
+docker run -e RUN_SEEDERS=true -p 5000:8000 fastapi-graphql:latest
 
 # Si deseas solo migraciones:
-docker run -e RUN_SEEDERS=false -p 5000:8000 flask-graphql:latest
+docker run -e RUN_SEEDERS=false -p 5000:8000 fastapi-graphql:latest
 
 ```
 docker run -p 5000:5000 \
   -e MONGODB_URL=mongodb://mongo:27017 \
   -e SECRET_KEY=your-secret \
-  flask-graphql:latest
+  fastapi-graphql:latest
 ```
 
 ## 📚 API Documentation
@@ -335,6 +335,7 @@ Authorization: Bearer <your-jwt-token>
 ### GraphQL Endpoints
 
 - **Main Endpoint**: POST `/graphql`
+- **Subscriptions**: WebSocket `/subscriptions`
 - **GraphQL Playground**: GET `/graphql` (development only)
 - **Health Check**: GET `/hello`
 
