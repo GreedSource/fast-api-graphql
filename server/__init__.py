@@ -9,10 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from graphql import parse
 from graphql import subscribe as graphql_subscribe
+from starlette.background import BackgroundTasks
 
 from server.config.settings import settings
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.logger_helper import LoggerHelper
+from server.helpers.mail_helper import MailHelper
+from server.helpers.template_helper import TemplateHelper
 from server.middlewares.cookie_logging_middleware import CookieLoggingMiddleware
 from server.middlewares.ws_logger_middleware import WSLoggerMiddleware
 from server.schema import schema
@@ -26,6 +29,11 @@ explorer_html = ExplorerGraphiQL().html(None)
 
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
+
+    # ✅ Inicializar MailHelper AQUÍ
+    MailHelper().init_app()
+
+    TemplateHelper().init_app()
 
     # Middleware de logging de cookies
     app.add_middleware(CookieLoggingMiddleware)
@@ -55,7 +63,7 @@ def create_app() -> FastAPI:
 
     # GraphQL endpoint
     @app.post("/graphql")
-    async def graphql_server(request: Request, response: Response):
+    async def graphql_server(request: Request, response: Response, background_tasks: BackgroundTasks):
         data = await request.json()
         operation_name = data.get("operationName", "unnamed")
 
@@ -67,6 +75,7 @@ def create_app() -> FastAPI:
             context_value={
                 "request": request,
                 "response": response,
+                "background_tasks": background_tasks,  # 👈 aquí
             },
             debug=app.debug,
             error_formatter=custom_format_error,

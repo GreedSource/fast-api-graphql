@@ -37,6 +37,7 @@ class MailHelper:
         sender: Optional[str] = None,
         background_tasks: Optional[BackgroundTasks] = None,
     ) -> bool:
+        LoggerHelper.info(f"Enviando correo a {recipients} - {subject}")
         if not self._initialized:
             raise CustomGraphQLExceptionHelper("MailHelper no está inicializado")
 

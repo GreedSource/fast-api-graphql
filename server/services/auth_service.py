@@ -7,6 +7,7 @@ from server.helpers.custom_graphql_exception_helper import (
 )
 from server.helpers.logger_helper import LoggerHelper
 from server.helpers.mail_helper import MailHelper
+from server.helpers.template_helper import TemplateHelper
 from server.models.user_model import UserItemModel
 from server.repositories.user_repository import UserRepository
 from server.utils.auth_utils import (
@@ -23,6 +24,7 @@ class AuthService:
         self.__repository = UserRepository()
 
         self.__mail_helper = MailHelper()
+        self.__template_helper = TemplateHelper()
         LoggerHelper.info("AuthService initialized")
 
     # -----------------
@@ -74,17 +76,26 @@ class AuthService:
     async def recover_password(self, email: str, background_tasks):
         user = await self.__repository.find_by_email(email)
         if not user:
+            LoggerHelper.warning(f"Password recovery attempted for non-existent email: {email}")
             return True
 
-        token = create_token({"email": email}, expires_minutes=60)
+        token = create_token({"email": email}, expires_in=60)
 
         frontend_url = settings.FRONTEND_URL
         reset_url = f"{frontend_url}/reset-password/{token}"
 
+        html = self.__template_helper.render(
+            "emails/reset_password.html",
+            {
+                "reset_url": reset_url,
+                "user": user,  # opcional
+            },
+        )
+
         self.__mail_helper.send_email(
             subject="Recupera tu contraseña",
             recipients=[email],
-            html=f"<a href='{reset_url}'>{reset_url}</a>",
+            html=html,
             background_tasks=background_tasks,
         )
 

@@ -117,11 +117,10 @@ class AuthResolver:
         )
 
     async def resolve_recover_password(self, _, info: GraphQLResolveInfo, email):
-        request = info.context["request"]
-
+        background_tasks = info.context["background_tasks"]
         result = await self.auth_service.recover_password(
             email=email,
-            background_tasks=request.state.background_tasks,
+            background_tasks=background_tasks,
         )
 
         return ResponseModel(

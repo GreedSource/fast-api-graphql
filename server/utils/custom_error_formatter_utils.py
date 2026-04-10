@@ -9,7 +9,7 @@ def custom_format_error(error: GraphQLError, debug: bool = False):
     original = error.original_error
 
     # 🔥 LOG CRUDO (esto es lo que quieres ver)
-    LoggerHelper.info("🔥 RAW ERROR:", repr(original))
+    LoggerHelper.info("🔥 RAW ERROR: %s", repr(original))
 
     if isinstance(original, ValidationError):
         return {
