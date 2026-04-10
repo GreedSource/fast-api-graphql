@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html
   lang="es"
   xmlns="http://www.w3.org/1999/xhtml"
@@ -120,12 +120,15 @@
         cellspacing="0"
         aria-hidden="true"
       >
+        {% if logo_url %}
+
         <tr>
           <td class="email-header">
-            <!-- Logo aquí -->
-            <img src="https://yourdomain.com/logo.png" alt="Tu Logo" />
+            <img src="{{ logo_url }}" alt="Tu Logo" />
           </td>
         </tr>
+
+        {% endif %}
 
         <tr>
           <td class="email-body">
@@ -140,15 +143,16 @@
 
         <tr>
           <td class="email-footer">
-            © {{ year or "2025" }} Tu Empresa. Todos los derechos reservados.<br />
+            © © {{ now().year }} {{ company_name }}. Todos los derechos
+            reservados.<br />
             <a
-              href="https://tusitio.com/privacidad"
+              href="{{ frontend_url }}/privacidad"
               style="color: #999999; text-decoration: none"
               >Política de Privacidad</a
             >
             |
             <a
-              href="https://tusitio.com/contacto"
+              href="{{ frontend_url }}/contacto"
               style="color: #999999; text-decoration: none"
               >Contacto</a
             >
