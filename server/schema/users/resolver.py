@@ -1,8 +1,11 @@
 # server/schema/users/resolver.py
-from ariadne import MutationType, QueryType
+from ariadne import MutationType, QueryType, SubscriptionType
 
 from server.decorators.require_token_decorator import require_token
+from server.enums.http_error_code_enum import HTTPErrorCode
+from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 from server.helpers.logger_helper import LoggerHelper
+from server.helpers.redis_helper import RedisHelper
 from server.models.response_model import ResponseModel
 from server.models.user_model import UpdateUserModel
 from server.services.user_service import UserService
@@ -12,11 +15,14 @@ class UserResolver:
     def __init__(self):
         self.query = QueryType()
         self.mutation = MutationType()
+        self.subscription = SubscriptionType()
 
         self.user_service = UserService()
+        self.redis_helper = RedisHelper()
 
         self._bind_queries()
         self._bind_mutations()
+        self._bind_subscriptions()
 
         LoggerHelper.info("UserResolver initialized")
 
@@ -31,6 +37,10 @@ class UserResolver:
     def _bind_mutations(self):
         self.mutation.set_field("updateUser", self.resolve_update_user)
         self.mutation.set_field("deleteUser", self.resolve_delete_user)
+
+    def _bind_subscriptions(self):
+        self.subscription.set_source("userUpdated", self.user_updated_source)
+        self.subscription.set_field("userUpdated", self.resolve_user_updated)
 
     # -----------------
     # Queries
@@ -78,9 +88,22 @@ class UserResolver:
             data=await self.user_service.delete_user(id),
         )
 
+    async def user_updated_source(self, _, info, userId):
+        if not info.context.get("current_user"):
+            raise CustomGraphQLExceptionHelper(
+                "Authentication required",
+                HTTPErrorCode.UNAUTHORIZED,
+            )
+
+        async for payload in self.redis_helper.subscribe(f"user_updated:{userId}"):
+            yield payload
+
+    def resolve_user_updated(self, payload, info, userId):
+        return payload
+
     # -----------------
     # Export
     # -----------------
 
     def get_resolvers(self):
-        return [self.query, self.mutation]
+        return [self.query, self.mutation, self.subscription]

@@ -1,6 +1,5 @@
 from server.decorators.singleton_decorator import singleton
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
-from server.helpers.logger_helper import LoggerHelper
 from server.models.permission_model import (
     CreatePermissionModel,
     PermissionItemModel,
@@ -44,8 +43,6 @@ class PermissionService:
 
     async def get_all(self):
         permissions = await self.__permission_repo.find_all()
-
-        LoggerHelper.debug(f"Permissions fetched: {permissions}")
 
         return PermissionListModel.model_validate(permissions).model_dump()
 

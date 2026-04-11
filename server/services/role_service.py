@@ -28,8 +28,9 @@ class RoleService:
         return RoleItemModel(**payload.model_dump(), _id=str(inserted_id))  # Return the created role as a dict
 
     async def update(self, payload: UpdateRoleModel):
-        result = await self.__repository.update(payload.id, payload.model_dump(exclude={"id"}, exclude_none=True))
-        if not result:
+        await self.__repository.update(payload.id, payload.model_dump(exclude={"id"}, exclude_none=True))
+        result = await self.__repository.find_by_id(payload.id)
+        if result is None:
             raise CustomGraphQLExceptionHelper("No se encontró el rol para actualizar")
         return RoleItemModel(**result)  # Return the created role as a dict
 

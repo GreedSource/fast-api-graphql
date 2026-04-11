@@ -57,7 +57,16 @@ class UpdateUserModel(BaseModel):
     name: Optional[str] = Field(None, description="User name", min_length=3)
     lastname: Optional[str] = Field(None, description="User lastname", min_length=3)
     email: Optional[EmailStr] = Field(None, description="User email")
-    role: Optional[RoleItemModel] = Field(None, description="User role")
+    role_id: Optional[str] = Field(None, alias="roleId", description="User role ID")
+
+    @field_validator("role_id")
+    @classmethod
+    def validate_role_id(cls, value):
+        if value is None:
+            return value
+        if not ObjectId.is_valid(value):
+            raise CustomGraphQLExceptionHelper("roleId not valid.")
+        return value
 
     model_config = {
         "populate_by_name": True  # permite pasar 'id' o '_id' al instanciar

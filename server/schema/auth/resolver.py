@@ -35,6 +35,7 @@ class AuthResolver:
         self.mutation.set_field("login", self.resolve_login)
         self.mutation.set_field("refreshToken", self.resolve_refresh_token)
         self.mutation.set_field("recoverPassword", self.resolve_recover_password)
+        self.mutation.set_field("logout", self.resolve_logout)
 
     # -----------------
     # Mutations
@@ -127,6 +128,30 @@ class AuthResolver:
             status=200,
             message="Recovery email sent",
             data=result,
+        )
+
+    async def resolve_logout(self, _, info: GraphQLResolveInfo):
+        response = info.context["response"]
+
+        await self.auth_service.logout()
+
+        response.delete_cookie(
+            key=settings.ACCESS_COOKIE_NAME,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+        )
+        response.delete_cookie(
+            key=settings.REFRESH_COOKIE_NAME,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+        )
+
+        return ResponseModel(
+            status=200,
+            message="Logout successful",
+            data=True,
         )
 
     # -----------------

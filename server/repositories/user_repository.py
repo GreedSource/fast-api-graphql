@@ -80,23 +80,56 @@ class UserRepository:
 
     async def aggregate_user_with_role(self, user_id: str):
         pipeline = [
-            # Convertimos role_id (string) a ObjectId
-            {"$addFields": {"roleIdObj": {"$toObjectId": "$role_id"}}},
-            # Solo el usuario que queremos
             {"$match": {"_id": ObjectId(user_id)}},
-            # Lookup usando roleIdObj
+            {
+                "$addFields": {
+                    "roleIdObj": {
+                        "$cond": {
+                            "if": {"$ifNull": ["$role_id", False]},
+                            "then": {"$toObjectId": "$role_id"},
+                            "else": None,
+                        }
+                    }
+                }
+            },
             {
                 "$lookup": {
                     "from": "roles",
-                    "localField": "roleIdObj",  # <--- usar el ObjectId
+                    "localField": "roleIdObj",
                     "foreignField": "_id",
                     "as": "role",
                 }
             },
-            # Unwind para tener un solo objeto en vez de lista
             {"$unwind": {"path": "$role", "preserveNullAndEmptyArrays": True}},
-            # Opcional: remover el campo temporal roleIdObj
-            {"$project": {"roleIdObj": 0}},
+            {
+                "$addFields": {
+                    "_id": {"$toString": "$_id"},
+                    "role": {
+                        "$cond": [
+                            {"$ifNull": ["$role", False]},
+                            {
+                                "_id": {"$toString": "$role._id"},
+                                "name": "$role.name",
+                                "description": "$role.description",
+                                "active": "$role.active",
+                                "permissions": [],
+                            },
+                            None,
+                        ]
+                    },
+                }
+            },
+            {
+                "$project": {
+                    "password": 0,
+                    "role_id": 0,
+                    "created_at": 0,
+                    "updated_at": 0,
+                    "role.created_at": 0,
+                    "role.updated_at": 0,
+                    "roleIdObj": 0,
+                }
+            },
         ]
         results = await self.__mongo.aggregate("users", pipeline)
         return results[0] if results else None

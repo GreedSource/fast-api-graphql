@@ -16,8 +16,10 @@ services:
       - .env
     environment:
       - WATCHFILES_FORCE_POLLING=true
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
     depends_on:
       - mongo
+      - redis
     command: >
       sh -c "python manage.py migrate && python manage.py seed-all && uvicorn app:app --host 0.0.0.0 --port $PORT --reload --ws websockets --proxy-headers"
 
@@ -32,6 +34,14 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
 
 volumes:
   mongo_data:
