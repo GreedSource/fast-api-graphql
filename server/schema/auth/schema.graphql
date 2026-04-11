@@ -20,6 +20,12 @@ input LoginInput {
   password: String!
 }
 
+input ResetPasswordInput {
+  token: String!
+  password: String!
+  confirmPassword: String!
+}
+
 type AuthResponse {
   status: Int!
   message: String
@@ -43,6 +49,7 @@ extend type Mutation {
   login(input: LoginInput!): AuthResponse!
   refreshToken(refreshToken: String!): AuthResponse!
   recoverPassword(email: String!): BooleanResponse!
+  resetPassword(input: ResetPasswordInput!): BooleanResponse!
   logout: BooleanResponse!
 }
 

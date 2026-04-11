@@ -1,5 +1,7 @@
 from ariadne import MutationType, QueryType
 
+from server.decorators.require_permission_decorator import require_permission
+from server.decorators.require_token_decorator import require_token
 from server.models.action_model import CreateActionModel
 from server.models.response_model import ResponseModel
 from server.services.action_service import ActionService
@@ -14,10 +16,14 @@ class ActionResolver:
         self.query.set_field("actions", self.resolve_actions)
         self.mutation.set_field("createAction", self.resolve_create)
 
+    @require_token
+    @require_permission(type="actions", action="read")
     async def resolve_actions(self, *_):
         data = await self.__service.get_all()
         return ResponseModel(status=200, message="Actions fetched", data=data)
 
+    @require_token
+    @require_permission(type="actions", action="create")
     async def resolve_create(self, _, __, input):
         model = CreateActionModel(**input)
         data = await self.__service.create(model)

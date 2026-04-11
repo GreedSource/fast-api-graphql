@@ -7,7 +7,7 @@ from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 from server.helpers.logger_helper import LoggerHelper
 from server.models.response_model import ResponseModel
-from server.models.user_model import RegisterModel
+from server.models.user_model import RegisterModel, ResetPasswordModel
 from server.services.auth_service import AuthService
 
 
@@ -35,6 +35,7 @@ class AuthResolver:
         self.mutation.set_field("login", self.resolve_login)
         self.mutation.set_field("refreshToken", self.resolve_refresh_token)
         self.mutation.set_field("recoverPassword", self.resolve_recover_password)
+        self.mutation.set_field("resetPassword", self.resolve_reset_password)
         self.mutation.set_field("logout", self.resolve_logout)
 
     # -----------------
@@ -127,6 +128,20 @@ class AuthResolver:
         return ResponseModel(
             status=200,
             message="Recovery email sent",
+            data=result,
+        )
+
+    async def resolve_reset_password(self, _, info: GraphQLResolveInfo, input):
+        model = ResetPasswordModel(**input)
+
+        result = await self.auth_service.reset_password(
+            token=model.token,
+            new_password=model.password,
+        )
+
+        return ResponseModel(
+            status=200,
+            message="Password reset successfully",
             data=result,
         )
 

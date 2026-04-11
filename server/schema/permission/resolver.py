@@ -1,5 +1,7 @@
 from ariadne import MutationType, QueryType
 
+from server.decorators.require_permission_decorator import require_permission
+from server.decorators.require_token_decorator import require_token
 from server.models.permission_model import CreatePermissionModel
 from server.models.response_model import ResponseModel
 from server.services.permission_service import PermissionService
@@ -21,6 +23,8 @@ class PermissionResolver:
         self.mutation.set_field("createPermission", self.resolve_create)
         self.mutation.set_field("deletePermission", self.resolve_delete)
 
+    @require_token
+    @require_permission(type="permissions", action="read")
     async def resolve_permissions(self, *_):
         data = await self.__service.get_all()
         return ResponseModel(
@@ -29,6 +33,8 @@ class PermissionResolver:
             data=data,
         )
 
+    @require_token
+    @require_permission(type="permissions", action="create")
     async def resolve_create(self, _, __, input):
         model = CreatePermissionModel(**input)
         data = await self.__service.create(model)
@@ -38,6 +44,8 @@ class PermissionResolver:
             data=data,
         )
 
+    @require_token
+    @require_permission(type="permissions", action="delete")
     async def resolve_delete(self, _, __, id):
         return await self.__service.delete(id)
 

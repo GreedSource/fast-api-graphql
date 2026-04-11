@@ -1,6 +1,7 @@
 from ariadne import MutationType, QueryType
 from graphql import GraphQLResolveInfo
 
+from server.decorators.require_permission_decorator import require_permission
 from server.decorators.require_token_decorator import require_token
 from server.helpers.logger_helper import LoggerHelper
 from server.models.response_model import ResponseModel
@@ -44,6 +45,7 @@ class RoleResolver:
     # -----------------
 
     @require_token
+    @require_permission(type="roles", action="create")
     async def resolve_create(self, _, info: GraphQLResolveInfo, input):
         model = CreateRoleModel(**input)
         response = await self.__service.create(model)
@@ -55,6 +57,7 @@ class RoleResolver:
         )
 
     @require_token
+    @require_permission(type="roles", action="update")
     async def resolve_update(self, _, info: GraphQLResolveInfo, input):
         model = UpdateRoleModel(**input)
         response = await self.__service.update(model)
@@ -65,6 +68,7 @@ class RoleResolver:
         )
 
     @require_token
+    @require_permission(type="roles", action="delete")
     async def resolve_delete(self, _, info: GraphQLResolveInfo, id: str):
         result = await self.__service.delete_role(id)
 
@@ -75,7 +79,8 @@ class RoleResolver:
         )
 
     @require_token
-    async def resolve_add_permissions(self, _, __, roleId: str, permissionIds: list[str]):
+    @require_permission(type="roles", action="update")
+    async def resolve_add_permissions(self, _, __, info: GraphQLResolveInfo, roleId: str, permissionIds: list[str]):
         await self.__service.add_permissions(roleId, permissionIds)
         return ResponseModel[bool](
             status=200,
@@ -84,7 +89,8 @@ class RoleResolver:
         )
 
     @require_token
-    async def resolve_remove_permissions(self, _, __, roleId: str, permissionIds: list[str]):
+    @require_permission(type="roles", action="update")
+    async def resolve_remove_permissions(self, _, __, info: GraphQLResolveInfo, roleId: str, permissionIds: list[str]):
         await self.__service.remove_permissions(roleId, permissionIds)
         return ResponseModel[bool](
             status=200,
@@ -97,6 +103,7 @@ class RoleResolver:
     # -----------------
 
     @require_token
+    @require_permission(type="roles", action="read")
     async def resolve_roles(self, *_):
         roles = await self.__service.get_roles()
 
@@ -107,6 +114,7 @@ class RoleResolver:
         )
 
     @require_token
+    @require_permission(type="roles", action="read")
     async def resolve_role(self, _, __, id: str):
         role = await self.__service.get_role(id)
 

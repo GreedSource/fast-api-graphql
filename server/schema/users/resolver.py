@@ -1,6 +1,7 @@
 # server/schema/users/resolver.py
 from ariadne import MutationType, QueryType, SubscriptionType
 
+from server.decorators.require_permission_decorator import require_permission
 from server.decorators.require_token_decorator import require_token
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
@@ -47,6 +48,7 @@ class UserResolver:
     # -----------------
 
     @require_token
+    @require_permission(type="users", action="read")
     async def resolve_users(self, _, info):
         response = await self.user_service.get_users()
         return ResponseModel(
@@ -56,6 +58,7 @@ class UserResolver:
         )
 
     @require_token
+    @require_permission(type="users", action="read")
     async def resolve_user(self, _, info, id):
         user = await self.user_service.get_user(id)
         return ResponseModel(
@@ -69,6 +72,7 @@ class UserResolver:
     # -----------------
 
     @require_token
+    @require_permission(type="users", action="update")
     async def resolve_update_user(self, _, info, input):
         model = UpdateUserModel(**input)
         update_data = model.model_dump(exclude_unset=True)
@@ -81,6 +85,7 @@ class UserResolver:
         )
 
     @require_token
+    @require_permission(type="users", action="delete")
     async def resolve_delete_user(self, _, info, id):
         return ResponseModel(
             status=200,

@@ -28,6 +28,7 @@ class UserService:
 
     async def get_user(self, user_id: str):
         user = await self.__repository.aggregate_user_with_role_permissions(user_id)
+        LoggerHelper.info(f"get_user: {user}")
         if not user:
             return None
         return UserItemModel(**user).model_dump(by_alias=False)

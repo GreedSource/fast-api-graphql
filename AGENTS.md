@@ -45,6 +45,7 @@ Capas principales:
 - `server/db/`: conexión Mongo, migraciones y seeders
 - `server/helpers/` y `server/utils/`: utilidades compartidas
 - `server/templates/`: templates HTML para correo/layouts
+- `server/decorators/`: decorators para autenticación y autorización de resolvers
 
 ## Cómo extender funcionalidad
 
@@ -67,6 +68,49 @@ Regla de diseño:
 - `services`: concentra reglas de negocio
 - `repositories`: encapsula consultas a Mongo
 - evita meter lógica compleja directamente en resolvers
+
+## Autenticación y Autorización
+
+### Decoradores disponibles
+
+**`@require_token`** (`server/decorators/require_token_decorator.py`):
+- Verifica que el usuario esté autenticado vía JWT (header `Authorization: Bearer` o cookies)
+- Inyecta `current_user` en `info.context["current_user"]`
+- El usuario incluye su rol con permisos resueltos: `user["role"]["permissions"] = [{"type": "users", "action": "read"}, ...]`
+
+**`@require_permission(type, action)`** (`server/decorators/require_permission_decorator.py`):
+- Verifica que el `current_user` tenga el permiso específico `{type, action}`
+- `type` es la key del módulo (ej: `"users"`, `"roles"`)
+- `action` es la key de la acción (ej: `"create"`, `"read"`, `"update"`, `"delete"`)
+- Lanza `HTTPErrorCode.FORBIDDEN` (403) si el usuario no tiene el permiso
+- Debe usarse **después** de `@require_token`
+
+**`@require_permissions(permissions, mode)`** (`server/decorators/require_permission_decorator.py`):
+- Verifica múltiples permisos simultáneamente
+- `permissions`: lista de dicts `[{"type": "users", "action": "create"}, ...]`
+- `mode`: `PermissionCheckMode.ANY` (basta uno) o `PermissionCheckMode.ALL` (todos requeridos)
+
+Ejemplo de uso en resolvers:
+
+```python
+from server.decorators.require_token_decorator import require_token
+from server.decorators.require_permission_decorator import require_permission
+
+class UserResolver:
+    @require_token
+    @require_permission(type="users", action="create")
+    async def resolve_create_user(self, _, info, input):
+        # Solo usuarios con permiso users:create pueden ejecutar esta mutación
+        ...
+```
+
+### Estructura de permisos
+
+Los permisos se almacenan como objetos `{type, action}` donde:
+- `type`: key del módulo (ej: `"users"`, `"roles"`, `"permissions"`)
+- `action`: key de la acción (ej: `"create"`, `"read"`, `"update"`, `"delete"`)
+
+El repositorio `UserRepository.aggregate_user_with_role_permissions()` resuelve los permisos del usuario haciendo join con las colecciones `roles`, `permissions`, `modules` y `actions`.
 
 ## Base de datos
 

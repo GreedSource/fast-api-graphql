@@ -2,14 +2,27 @@ from server.helpers.logger_helper import LoggerHelper
 from server.helpers.mongo_helper import MongoHelper
 
 DEFAULT_ROLE_PERMISSIONS = [
+    # Users
     {"module_key": "users", "action_key": "create"},
     {"module_key": "users", "action_key": "read"},
     {"module_key": "users", "action_key": "update"},
     {"module_key": "users", "action_key": "delete"},
+    # Roles
+    {"module_key": "roles", "action_key": "create"},
     {"module_key": "roles", "action_key": "read"},
+    {"module_key": "roles", "action_key": "update"},
+    {"module_key": "roles", "action_key": "delete"},
+    # Permissions
     {"module_key": "permissions", "action_key": "read"},
+    {"module_key": "permissions", "action_key": "create"},
+    {"module_key": "permissions", "action_key": "delete"},
+    # Modules
     {"module_key": "modules", "action_key": "read"},
+    {"module_key": "modules", "action_key": "create"},
+    {"module_key": "modules", "action_key": "update"},
+    # Actions
     {"module_key": "actions", "action_key": "read"},
+    {"module_key": "actions", "action_key": "create"},
 ]
 
 

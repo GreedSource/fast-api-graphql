@@ -21,7 +21,7 @@ services:
       - mongo
       - redis
     command: >
-      sh -c "python manage.py migrate && python manage.py seed-all && uvicorn app:app --host 0.0.0.0 --port $PORT --reload --ws websockets --proxy-headers"
+      sh -c "python manage.py migrate && python manage.py seed-all && uvicorn app:app --host 0.0.0.0 --port $PORT --reload --ws websockets --proxy-headers --timeout-graceful-shutdown 2"
 
   mongo:
     image: mongo:7

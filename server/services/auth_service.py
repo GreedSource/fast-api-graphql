@@ -15,6 +15,7 @@ from server.utils.auth_utils import (
     create_token,
     verify_password,
     verify_refresh_token,
+    verify_token,
 )
 
 
@@ -103,3 +104,29 @@ class AuthService:
         )
 
         return True
+
+    async def reset_password(self, token: str, new_password: str):
+        try:
+            payload = verify_token(token)
+            email = payload.get("email")
+
+            if not email:
+                raise CustomGraphQLExceptionHelper("Token inválido")
+
+            user = await self.__repository.find_by_email(email)
+            if not user:
+                raise CustomGraphQLExceptionHelper("Usuario no encontrado")
+
+            await self.__repository.update(
+                str(user["_id"]),
+                {"password": new_password},
+            )
+
+            LoggerHelper.info(f"Password reset successfully for user: {email}")
+            return True
+
+        except CustomGraphQLExceptionHelper:
+            raise
+        except Exception as e:
+            LoggerHelper.error(f"Error resetting password: {str(e)}")
+            raise CustomGraphQLExceptionHelper("Error al restablecer la contraseña")
