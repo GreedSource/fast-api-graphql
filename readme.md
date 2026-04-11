@@ -1,418 +1,291 @@
 # FastAPI GraphQL API
 
-A modern GraphQL API built with FastAPI, Ariadne, and MongoDB. This project implements a role-based access control (RBAC) system with JWT authentication, user management, permissions, and role administration.
+API backend construida con `FastAPI`, `Ariadne` y `MongoDB`, orientada a autenticación JWT, control de acceso por roles (RBAC) y administración de usuarios, roles, módulos, acciones y permisos.
 
-## 📋 Table of Contents
+## Características
 
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
-- [Configuration](#configuration)
-- [Running the Application](#running-the-application)
-- [Docker Support](#docker-support)
-- [API Documentation](#api-documentation)
-- [Project Architecture](#project-architecture)
+- API GraphQL sobre `FastAPI`
+- Soporte HTTP y WebSocket para GraphQL
+- Autenticación con JWT
+- RBAC con roles, permisos, módulos y acciones
+- Persistencia async con `motor`
+- Migraciones y seeders para MongoDB
+- Plantillas HTML para correo
+- Contenedorización con Docker Compose
+- Linting con `ruff`
 
-## ✨ Features
+## Stack
 
-- **GraphQL API** - Built with Ariadne for flexible query language
-- **Authentication** - JWT-based token authentication
-- **Role-Based Access Control (RBAC)** - Comprehensive permission system
-- **User Management** - Create, read, update, and delete users
-- **MongoDB Integration** - Async MongoDB support with Motor
-- **Email Notifications** - Password reset and email verification
-- **Error Handling** - Custom GraphQL exception handling
-- **Logging** - Structured logging for debugging and monitoring
-- **Docker Support** - Containerized deployment with Docker Compose
-- **Code Quality** - Ruff linting and formatting
+- Python 3.12
+- FastAPI
+- Ariadne
+- MongoDB + Motor
+- Pydantic Settings
+- Uvicorn
+- Ruff
 
-## 🛠 Tech Stack
+## Estructura del proyecto
 
-- **Framework**: FastAPI 0.115.6
-- **GraphQL**: Ariadne 0.26.2
-- **Database**: MongoDB 4.16.0 with Motor 3.7.0 (async driver)
-- **Authentication**: PyJWT 2.10.1, bcrypt 4.3.0
-- **Validation**: Pydantic 2.11.7
-- **Server**: Uvicorn 0.30.6 with uvloop 0.22.1
-- **Linting**: Ruff 0.15.1
-- **Dev Tools**: Pre-commit hooks
-
-## 📁 Project Structure
-
-```
+```text
 fast-api-graphql/
-├── app.py                          # Application entry point
-├── requirements.txt                # Python dependencies
-├── dockerfile                      # Docker image definition
-├── docker-compose.yml              # Docker Compose configuration
-├── ruff.toml                       # Ruff linting configuration
-├── readme.md                       # This file
+├── app.py
+├── manage.py
+├── requirements.txt
+├── dockerfile
+├── docker-compose.yml
+├── ruff.toml
+├── .env.example
 └── server/
-    ├── __init__.py                 # Application factory
+    ├── __init__.py
     ├── config/
-    │   └── settings.py             # Configuration settings
     ├── constants/
-    │   └── error_messages.py       # Error message constants
     ├── core/
-    │   └── lifespan.py             # Application lifecycle management
     ├── db/
-    │   └── mongo.py                # MongoDB client configuration
     ├── decorators/
-    │   ├── require_token_decorator.py    # JWT token validation
-    │   └── singleton_decorator.py        # Singleton pattern
     ├── enums/
-    │   └── http_error_code_enum.py      # HTTP error code enums
     ├── helpers/
-    │   ├── custom_graphql_exception_helper.py  # GraphQL exceptions
-    │   ├── logger_helper.py             # Logging utilities
-    │   ├── mail_helper.py               # Email sending
-    │   └── mongo_helper.py              # MongoDB utilities
     ├── middlewares/
-    │   └── cookie_logging_middleware.py # Request logging middleware
     ├── models/
-    │   ├── action_model.py              # Action data model
-    │   ├── module_model.py              # Module data model
-    │   ├── permission_model.py          # Permission data model
-    │   ├── response_model.py            # API response model
-    │   ├── role_model.py                # Role data model
-    │   └── user_model.py                # User data model
     ├── repositories/
-    │   ├── action_repository.py         # Action database access
-    │   ├── module_repository.py         # Module database access
-    │   ├── permission_repository.py     # Permission database access
-    │   ├── role_repository.py           # Role database access
-    │   └── user_repository.py           # User database access
     ├── schema/
-    │   ├── __init__.py
-    │   ├── schema.graphql               # Main GraphQL schema
-    │   ├── actions/
-    │   │   ├── action_resolver.py       # Action resolvers
-    │   │   └── schema.graphql           # Action schema
-    │   ├── auth/
-    │   │   ├── resolver.py              # Authentication resolvers
-    │   │   └── schema.graphql           # Auth schema
-    │   ├── hello/
-    │   │   ├── resolver.py              # Health check resolver
-    │   │   └── schema.graphql           # Hello schema
-    │   ├── modules/
-    │   │   ├── resolver.py              # Module resolvers
-    │   │   └── schema.graphql           # Module schema
-    │   ├── permission/
-    │   │   ├── resolver.py              # Permission resolvers
-    │   │   └── schema.graphql           # Permission schema
-    │   ├── roles/
-    │   │   ├── resolver.py              # Role resolvers
-    │   │   └── schema.graphql           # Role schema
-    │   └── users/
-    │       ├── resolver.py              # User resolvers
-    │       └── schema.graphql           # User schema
     ├── services/
-    │   ├── action_service.py            # Action business logic
-    │   ├── auth_service.py              # Authentication logic
-    │   ├── module_service.py            # Module business logic
-    │   ├── permission_service.py        # Permission business logic
-    │   ├── role_service.py              # Role business logic
-    │   └── user_service.py              # User business logic
     ├── templates/
-    │   └── emails/
-    │       └── reset_password.html      # Password reset email template
-    │   └── layouts/
-    │       └── base_template.html       # Base email template
     └── utils/
-        ├── auth_utils.py                # Authentication utilities
-        └── custom_error_formatter_utils.py  # Error formatting
 ```
 
-## 📋 Prerequisites
+Capas principales:
 
-### For Docker (Recommended)
+- `server/schema/`: SDL GraphQL y resolvers
+- `server/services/`: lógica de negocio
+- `server/repositories/`: acceso a datos
+- `server/models/`: modelos usados por el dominio
+- `server/db/`: conexión, migraciones y seeders
 
-- Docker 20.10+
-- Docker Compose 2.0+
-- Git
+## Requisitos
 
-### For Local Development (Optional)
+### Opción recomendada
 
-- Python 3.9+
-- MongoDB 4.0+
-- Git
+- Docker
+- Docker Compose
 
-## 🚀 Quick Start
+### Opción local
 
-### 1. Clone the Repository
+- Python 3.12
+- MongoDB
+
+## Configuración
+
+La fuente de verdad para variables de entorno es `server/config/settings.py`.
+
+1. Copia el archivo de ejemplo:
 
 ```bash
-git clone <repository-url>
-cd fast-api-graphql
+cp .env.example .env
 ```
 
-### 2. Start with Docker Compose
+2. Ajusta los valores según tu entorno.
 
-```bash
-# Build and start the application
-docker-compose up -d --build
-```
-
-The application will be running at `http://localhost:5000`
-
-### Local Development Setup (Optional)
-
-If you prefer developing locally without Docker:
-
-```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the application
-python app.py
-```
-
-## 🧱 Migraciones y Seeders
-
-Este proyecto ahora incluye un pequeño sistema de migraciones para MongoDB y un seeder de usuarios:
-
-- `manage.py migrate`: aplica migraciones (`migrations` collection + índices + validadores JSON Schema)
-- `manage.py seed-modules`: crea módulos básicos
-- `manage.py seed-actions`: crea acciones básicas
-- `manage.py seed-permissions`: crea permisos básicos a partir de módulos y acciones existentes
-- `manage.py seed-roles`: crea roles admin/user
-- `manage.py seed-users`: crea users admin/user base
-- `manage.py seed-all`: ejecuta migraciones + todos los seeders
-- `manage.py status`: lista migraciones aplicadas
-
-Uso:
-
-```bash
-# Desde la raíz del proyecto
-python manage.py migrate
-python manage.py seed-users
-python manage.py status
-```
-
-> Nota: Las migraciones aplican esquema utilizando `collMod` y `create_collection` con `validationAction="error"` para que Mongo valide los campos.
-
-## ⚙️ Configuration
-
-When using Docker Compose, the application is pre-configured and ready to run out of the box.
-
-For custom configuration or local development, create a `.env` file in the project root:
+Variables esperadas por la aplicación:
 
 ```env
-# MongoDB Configuration
-MONGODB_URL=mongodb://localhost:27017
-MONGODB_DB_NAME=rbac
+PORT=8000
+APP_NAME=GraphQL API
+DEBUG=true
 
-# JWT Configuration
-SECRET_KEY=your-secret-key-here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+JWT_SECRET_KEY=change_this_to_a_strong_access_secret
+JWT_REFRESH_SECRET_KEY=change_this_to_a_strong_refresh_secret
 
-# Email Configuration
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SENDER_EMAIL=noreply@example.com
+ACCESS_COOKIE_NAME=access_token
+REFRESH_COOKIE_NAME=refresh_token
+SESSION_SECRET_KEY=change_this_to_a_strong_session_secret
+SESSION_MAX_AGE=86400
 
-# Environment
-ENVIRONMENT=development
-DEBUG=True
+MONGO_URI=mongodb://root:example@mongo:27017
+MONGO_DB_NAME=graphqlapp
+RUN_SEEDERS=true
 
-# Seeders control
-# Si true, manage.py seed-all correrá los seeders
-# Si false, solo corre migraciones (ó corre cada seeder explícito si se quiere)
-RUN_SEEDERS=false
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USE_SSL=false
+MAIL_USERNAME=your_email@example.com
+MAIL_PASSWORD=your_app_password
+MAIL_DEFAULT_SENDER=no-reply@example.com
+
+FRONTEND_URL=http://localhost:5173/
+CORS_ORIGINS=http://localhost:5000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,https://studio.apollographql.com
 ```
 
-## 🏃 Running the Application
+Notas:
 
-### 🐳 Recommended: Docker Compose (with Hot Reload)
+- `CORS_ORIGINS` se parsea como una cadena separada por comas
+- `RUN_SEEDERS=true` permite que `seed-all` ejecute seeders
+- en Docker Compose el contenedor usa `MONGO_URI=mongodb://root:example@mongo:27017`
 
-The project is pre-configured for hot reload development using Docker Compose:
+## Ejecutar con Docker Compose
+
+La forma más simple de levantar el proyecto es con Docker Compose:
 
 ```bash
-# Build and start containers in detached mode
 docker-compose up -d --build
+```
 
-# View logs in real-time
-docker-compose logs -f app
+Esto levanta:
 
-# Stop containers
+- `api`
+- `mongo`
+
+El servicio `api` ejecuta al iniciar:
+
+```bash
+python manage.py migrate
+python manage.py seed-all
+uvicorn app:app --host 0.0.0.0 --port $PORT --reload --ws websockets --proxy-headers
+```
+
+Comandos útiles:
+
+```bash
+docker-compose up -d --build
+docker-compose logs -f api
 docker-compose down
 ```
 
-The API will be available at `http://localhost:5000`
+La API queda disponible en:
 
-GraphQL playground: `http://localhost:5000/graphql`
+- `http://localhost:<PORT>`
+- GraphQL Explorer: `http://localhost:<PORT>/graphql`
+- Health check: `http://localhost:<PORT>/ping`
 
-**Benefits**: Hot reload on code changes, MongoDB pre-configured, isolated environment, no local setup required.
+## Ejecutar localmente
 
-### Local Development (Optional)
-
-For local development without Docker:
-
-```bash
-# Ensure MongoDB is running locally
-python app.py
-```
-
-### Production Mode
+1. Crea y activa un entorno virtual:
 
 ```bash
-uvicorn server:create_app --host 0.0.0.0 --port 5000 --workers 4
+python -m venv .venv
+source .venv/bin/activate
 ```
 
-## 🐳 Docker Support
-
-### Quick Start with Docker Compose (Recommended)
-
-The recommended way to run this project is with Docker Compose, which includes hot reload for development:
+2. Instala dependencias:
 
 ```bash
-# Build and start containers in detached mode with hot reload
-docker-compose up -d --build
-
-# View application logs
-docker-compose logs -f app
-
-# Stop containers
-docker-compose down
+pip install -r requirements.txt
 ```
 
-The application will be available at `http://localhost:5000`
+3. Asegúrate de tener MongoDB disponible y configura `.env`
 
-The Docker setup includes:
+Ejemplo local:
 
-- **Hot Reload**: Automatic restart on code changes
-- **MongoDB Integration**: Pre-configured MongoDB instance
-- **Development-Ready**: All dependencies installed and configured
-- **Volume Mounting**: Source code synced for live development
+```env
+MONGO_URI=mongodb://localhost:27017
+MONGO_DB_NAME=graphqlapp
+```
 
-### Build Docker Image (Manual)
+4. Corre migraciones:
 
 ```bash
-docker build -t fastapi-graphql:latest .
+python manage.py migrate
 ```
 
-### Run Docker Container (Manual)
+5. Si quieres datos base, ejecuta seeders:
 
 ```bash
-# Con base en la nueva Dockerfile, migraciones se ejecutan automáticamente en start
-# y seeders se ejecutan solo si RUN_SEEDERS=true
-
-# Sin seeders:
-docker run -e RUN_SEEDERS=false -p 5000:8000 fastapi-graphql:latest
-
-# Con seeders:
-docker run -e RUN_SEEDERS=true -p 5000:8000 fastapi-graphql:latest
-
-# Si deseas solo migraciones:
-docker run -e RUN_SEEDERS=false -p 5000:8000 fastapi-graphql:latest
-
-```
-docker run -p 5000:5000 \
-  -e MONGODB_URL=mongodb://mongo:27017 \
-  -e SECRET_KEY=your-secret \
-  fastapi-graphql:latest
+python manage.py seed-all
 ```
 
-## 📚 API Documentation
-
-### Authentication
-
-All protected endpoints require a JWT token in the Authorization header:
-
-```
-Authorization: Bearer <your-jwt-token>
-```
-
-### GraphQL Endpoints
-
-- **Main Endpoint**: POST `/graphql`
-- **Subscriptions**: WebSocket `/subscriptions`
-- **GraphQL Playground**: GET `/graphql` (development only)
-- **Health Check**: GET `/hello`
-
-### Core Queries & Mutations
-
-The API includes the following GraphQL operations:
-
-- **Authentication**: Login, logout, token refresh
-- **User Management**: Create, read, update, delete users
-- **Roles**: Create and manage user roles
-- **Permissions**: Define and assign permissions
-- **Modules**: Manage application modules
-- **Actions**: Track user actions and audit logs
-
-## 🏗 Project Architecture
-
-### Design Patterns
-
-- **Repository Pattern**: Database access layer separation
-- **Service Layer**: Business logic encapsulation
-- **Factory Pattern**: Application initialization
-- **Singleton Pattern**: Shared resource management
-- **Middleware Pattern**: Request/response processing
-
-### Authentication Flow
-
-1. User submits credentials via `login` mutation
-2. System verifies credentials against hashed passwords
-3. JWT token is generated with user claims
-4. Token is returned to client
-5. Client includes token in subsequent requests
-6. Token is validated via decorator before accessing protected resolvers
-
-### Database Layer
-
-- MongoDB is the primary data store
-- Motor provides async database operations
-- Repositories handle all database queries
-- Services contain business logic
-
-### Error Handling
-
-- Custom GraphQL exceptions for consistent error responses
-- Error formatting utility for standardized error messages
-- HTTP error code enums for consistency
-- Detailed logging for debugging
-
-## 🧪 Code Quality
-
-### Linting & Formatting
+6. Levanta la API:
 
 ```bash
-# Run Ruff linter
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload --ws websockets
+```
+
+## Migraciones y seeders
+
+`manage.py` expone los siguientes comandos:
+
+- `python manage.py migrate`
+- `python manage.py seed-modules`
+- `python manage.py seed-actions`
+- `python manage.py seed-permissions`
+- `python manage.py seed-roles`
+- `python manage.py seed-users`
+- `python manage.py seed-all`
+- `python manage.py status`
+
+Qué hace cada uno:
+
+- `migrate`: aplica migraciones e índices/validaciones en MongoDB
+- `seed-modules`: crea módulos base
+- `seed-actions`: crea acciones base
+- `seed-permissions`: genera permisos a partir de módulos y acciones
+- `seed-roles`: crea roles base
+- `seed-users`: crea usuarios base
+- `seed-all`: corre migraciones y seeders
+- `status`: muestra migraciones aplicadas
+
+## Endpoints disponibles
+
+Rutas HTTP principales:
+
+- `GET /`
+- `GET /ping`
+- `GET /graphql`
+- `POST /graphql`
+
+También existe soporte WebSocket en:
+
+- `WS /graphql`
+
+## Desarrollo
+
+Lint:
+
+```bash
 ruff check .
-
-# Format code with Ruff
-ruff format .
 ```
 
-### Pre-commit Hooks
+Formato/estilo actual:
+
+- `ruff.toml` usa `line-length = 120`
+- `target-version = "py312"`
+
+## Arquitectura de GraphQL
+
+El esquema se compone cargando todos los archivos `.graphql` desde `server/schema/` y uniendo resolvers desde:
+
+- `hello`
+- `auth`
+- `users`
+- `roles`
+- `modules`
+- `actions`
+- `permission`
+
+Cuando agregues un nuevo dominio:
+
+1. crea `server/schema/<dominio>/schema.graphql`
+2. implementa su resolver
+3. regístralo en `server/schema/__init__.py`
+4. añade servicio/repositorio/migración si aplica
+
+## Dockerfile
+
+La imagen usa una estrategia multi-stage:
+
+- `lint`: ejecuta `ruff check .`
+- `builder`: instala dependencias en un virtualenv
+- `runtime`: copia el entorno y levanta `uvicorn`
+
+En runtime, el contenedor ejecuta:
 
 ```bash
-# Install pre-commit hooks
-pre-commit install
-
-# Run all hooks
-pre-commit run --all-files
+python manage.py migrate && \
+if [ "$RUN_SEEDERS" = "true" ]; then python manage.py seed-all; fi && \
+uvicorn app:app --host 0.0.0.0 --port 8000 --ws websockets --proxy-headers
 ```
 
-## 📝 License
+## Estado actual
 
-This project is proprietary and confidential.
-
-## 💬 Support
-
-For questions or issues, please contact the development team or open an issue in the repository.
-
----
-
-**Last Updated**: February 2026
+- No se observan tests automatizados en el repositorio
+- `.env.example` ya está alineado con `settings.py`
+- algunas credenciales reales pueden existir en `.env`; no las copies al repositorio

@@ -15,6 +15,9 @@ __pycache__/
 # Configuración de usuario de VSCode
 .vscode/
 
+# Configuración de Codex
+.codex
+
 # Archivos de pruebas / cobertura
 .coverage
 htmlcov/
