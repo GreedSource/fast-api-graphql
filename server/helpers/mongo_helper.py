@@ -29,6 +29,7 @@ class MongoHelper:
     ):
         self.db = db
         self.allowed_collections = allowed_collections
+        LoggerHelper.success("MongoHelper initialized with database: " + db.name)
 
     # --------------------------------------------------
     # Internos

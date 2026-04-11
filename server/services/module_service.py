@@ -2,6 +2,7 @@ from server.decorators.singleton_decorator import singleton
 from server.models.module_model import (
     CreateModuleModel,
     ModuleItemModel,
+    ModuleListModel,
     UpdateModuleModel,
 )
 from server.repositories.module_repository import ModuleRepository
@@ -18,14 +19,17 @@ class ModuleService:
 
     async def update(self, payload: UpdateModuleModel):
         result = await self.__repository.update(payload.id, payload.model_dump(exclude={"id"}, exclude_none=True))
-        return ModuleItemModel(**result)
+        return ModuleItemModel(**result).model_dump(by_alias=False)
 
     async def get_all(self):
         modules = await self.__repository.find_all()
-        return modules
+        return ModuleListModel.model_validate(modules).model_dump(by_alias=False)
 
     async def get_one(self, module_id: str):
-        return await self.__repository.find_by_id(module_id)
+        module = await self.__repository.find_by_id(module_id)
+        if not module:
+            return None
+        return ModuleItemModel(**module).model_dump(by_alias=False)
 
     async def find_by_id(self, module_id: str):
         return await self.__repository.find_by_id(module_id)

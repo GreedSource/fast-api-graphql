@@ -11,6 +11,8 @@ class PermissionItemModel(BaseModel):
     description: Optional[str] = Field(default=None, description="Permission description")
     moduleId: str = Field(..., description="Permission type", alias="moduleId")
     actionId: str = Field(..., description="Permission action", alias="actionId")
+    moduleKey: str = Field(..., description="Module key", alias="moduleKey")
+    actionKey: str = Field(..., description="Action key", alias="actionKey")
 
     model_config = {"populate_by_name": True}
 

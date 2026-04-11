@@ -1,5 +1,5 @@
 from server.decorators.singleton_decorator import singleton
-from server.models.action_model import ActionItemModel, CreateActionModel
+from server.models.action_model import ActionItemModel, ActionListModel, CreateActionModel
 from server.repositories.action_repository import ActionRepository
 
 
@@ -13,7 +13,8 @@ class ActionService:
         return ActionItemModel(**payload.model_dump(), _id=str(inserted_id))
 
     async def get_all(self):
-        return await self.__repository.find_all()
+        actions = await self.__repository.find_all()
+        return ActionListModel.model_validate(actions).model_dump(by_alias=False)
 
     async def find_by_id(self, action_id: str):
         return await self.__repository.find_by_id(action_id)

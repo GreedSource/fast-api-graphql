@@ -73,6 +73,9 @@ class AuthService:
             "refreshToken": refresh_token,
         }
 
+    async def logout(self):
+        return True
+
     async def recover_password(self, email: str, background_tasks):
         user = await self.__repository.find_by_email(email)
         if not user:

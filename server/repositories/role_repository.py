@@ -19,14 +19,119 @@ class RoleRepository:
     async def create(self, role_data: dict):
         return await self.__mongo.insert_one("roles", role_data)
 
+    def _build_role_pipeline(self, role_id: str | None = None):
+        pipeline = []
+
+        if role_id:
+            pipeline.append({"$match": {"_id": ObjectId(role_id)}})
+
+        pipeline.extend(
+            [
+                {
+                    "$lookup": {
+                        "from": "permissions",
+                        "localField": "permissions",
+                        "foreignField": "_id",
+                        "as": "permissions_docs",
+                    }
+                },
+                {
+                    "$lookup": {
+                        "from": "modules",
+                        "localField": "permissions_docs.module_id",
+                        "foreignField": "_id",
+                        "as": "modules",
+                    }
+                },
+                {
+                    "$lookup": {
+                        "from": "actions",
+                        "localField": "permissions_docs.action_id",
+                        "foreignField": "_id",
+                        "as": "actions",
+                    }
+                },
+                {
+                    "$addFields": {
+                        "permissions": {
+                            "$map": {
+                                "input": {"$ifNull": ["$permissions_docs", []]},
+                                "as": "perm",
+                                "in": {
+                                    "action": {
+                                        "$arrayElemAt": [
+                                            {
+                                                "$map": {
+                                                    "input": {
+                                                        "$filter": {
+                                                            "input": "$actions",
+                                                            "as": "action",
+                                                            "cond": {
+                                                                "$eq": [
+                                                                    "$$action._id",
+                                                                    "$$perm.action_id",
+                                                                ]
+                                                            },
+                                                        }
+                                                    },
+                                                    "as": "matched_action",
+                                                    "in": "$$matched_action.key",
+                                                }
+                                            },
+                                            0,
+                                        ]
+                                    },
+                                    "type": {
+                                        "$arrayElemAt": [
+                                            {
+                                                "$map": {
+                                                    "input": {
+                                                        "$filter": {
+                                                            "input": "$modules",
+                                                            "as": "module",
+                                                            "cond": {
+                                                                "$eq": [
+                                                                    "$$module._id",
+                                                                    "$$perm.module_id",
+                                                                ]
+                                                            },
+                                                        }
+                                                    },
+                                                    "as": "matched_module",
+                                                    "in": "$$matched_module.key",
+                                                }
+                                            },
+                                            0,
+                                        ]
+                                    },
+                                },
+                            }
+                        }
+                    }
+                },
+                {
+                    "$project": {
+                        "_id": 1,
+                        "name": 1,
+                        "description": 1,
+                        "active": 1,
+                        "permissions": 1,
+                    }
+                },
+            ]
+        )
+
+        return pipeline
+
     async def find_by_id(self, role_id: str):
-        return await self.__mongo.find_one("roles", {"_id": ObjectId(role_id)})
+        roles = await self.__mongo.aggregate("roles", self._build_role_pipeline(role_id))
+        return roles[0] if roles else None
 
     async def find_by_name(self, name: str):
         return await self.__mongo.find_one("roles", {"name": name})
 
     async def find_all(self):
-        return await self.__mongo.find_many("roles", {})
+        return await self.__mongo.aggregate("roles", self._build_role_pipeline())
 
     async def update(self, role_id: str, update_data: dict):
         return await self.__mongo.update_one(

@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     MONGO_DB_NAME: str
 
     # ======================
+    # REDIS
+    # ======================
+    REDIS_URL: str = "redis://redis:6379/0"
+
+    # ======================
     # MAIL
     # ======================
     MAIL_SERVER: str

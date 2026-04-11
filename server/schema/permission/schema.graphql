@@ -3,6 +3,8 @@ type Permission {
   description: String
   moduleId: String! # module.key
   actionId: String! # action.key
+  moduleKey: String! # module.key
+  actionKey: String! # action.key
 }
 
 input CreatePermissionInput {

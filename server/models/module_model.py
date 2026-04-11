@@ -1,5 +1,6 @@
 from typing import List, Optional
 
+from bson import ObjectId
 from pydantic import BaseModel, Field, RootModel, field_validator
 
 
@@ -11,6 +12,15 @@ class ModuleItemModel(BaseModel):
     active: bool = True
 
     model_config = {"populate_by_name": True}
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def cast_object_id(cls, value):
+        if value is None:
+            return value
+        if isinstance(value, ObjectId):
+            return str(value)
+        return value
 
 
 class ModuleListModel(RootModel):

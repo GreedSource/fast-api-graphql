@@ -13,9 +13,11 @@ from graphql import subscribe as graphql_subscribe
 from starlette.background import BackgroundTasks
 
 from server.config.settings import settings
+from server.db.mongo import close_mongo
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.logger_helper import LoggerHelper
 from server.helpers.mail_helper import MailHelper
+from server.helpers.redis_helper import RedisHelper
 from server.helpers.template_helper import TemplateHelper
 from server.middlewares.cookie_logging_middleware import CookieLoggingMiddleware
 from server.middlewares.ws_logger_middleware import WSLoggerMiddleware
@@ -261,6 +263,13 @@ def create_app() -> FastAPI:
                 await websocket.close(code=close_code)
             except Exception:
                 pass
+
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        LoggerHelper.info("Shutting down application...")
+        await RedisHelper().close()
+        await close_mongo()
+        LoggerHelper.info("Application shutdown complete")
 
     return app
 
