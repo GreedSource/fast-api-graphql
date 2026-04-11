@@ -36,15 +36,30 @@ class PermissionService:
 
         return PermissionItemModel(
             id=str(permission_id),
-            type=module["key"],
-            action=action["key"],
+            moduleId=module["key"],
+            actionId=action["key"],
+            moduleKey=module["key"],
+            actionKey=action["key"],
             description=payload.description,
         ).model_dump()
 
     async def get_all(self):
         permissions = await self.__permission_repo.find_all()
 
-        return PermissionListModel.model_validate(permissions).model_dump()
+        # Enriquecer cada permiso con los nombres de modulo y accion
+        enriched_permissions = []
+        for perm in permissions:
+            module = await self.__module_service.find_by_id(perm.get("moduleId"))
+            action = await self.__action_service.find_by_id(perm.get("actionId"))
+
+            enriched_perm = {
+                **perm,
+                "moduleKey": module.get("key") if module else "unknown",
+                "actionKey": action.get("key") if action else "unknown",
+            }
+            enriched_permissions.append(enriched_perm)
+
+        return PermissionListModel.model_validate(enriched_permissions).model_dump()
 
     async def delete(self, permission_id: str):
         result = await self.__permission_repo.delete(permission_id)
