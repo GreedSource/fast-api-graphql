@@ -15,7 +15,6 @@ class UserService:
         self.__repository = UserRepository()
         self.__role_service = RoleService()
         self.__redis = RedisHelper()
-        # self.__mail_helper = MailHelper()
         LoggerHelper.info("UserService initialized")
 
     # -----------------
@@ -28,7 +27,6 @@ class UserService:
 
     async def get_user(self, user_id: str):
         user = await self.__repository.aggregate_user_with_role_permissions(user_id)
-        LoggerHelper.info(f"get_user: {user}")
         if not user:
             return None
         return UserItemModel(**user).model_dump(by_alias=False)
@@ -43,7 +41,7 @@ class UserService:
         if update_data:
             await self.__repository.update(user_id, update_data)
 
-        user = await self.__repository.aggregate_user_with_role(user_id)
+        user = await self.__repository.aggregate_user_with_role_permissions(user_id)
         payload = UserItemModel(**user).model_dump(by_alias=False)
         await self.__redis.publish_json(f"user_updated:{user_id}", payload)
         return payload

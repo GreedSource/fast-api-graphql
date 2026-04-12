@@ -4,7 +4,6 @@ from typing import List, Union
 
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
-from server.helpers.logger_helper import LoggerHelper
 
 
 class PermissionCheckMode(str, Enum):
@@ -37,7 +36,6 @@ def require_permission(type: str, action: str):
                     "Usuario no autenticado",
                     HTTPErrorCode.UNAUTHORIZED,
                 )
-            LoggerHelper.info(f"current_user: {current_user}")
             role = current_user.get("role")
             if not role:
                 raise CustomGraphQLExceptionHelper(
