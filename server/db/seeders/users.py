@@ -1,3 +1,7 @@
+from typing import Any
+
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from server.helpers.logger_helper import LoggerHelper
 from server.helpers.mongo_helper import MongoHelper
 from server.utils.auth_utils import hash_password
@@ -22,7 +26,7 @@ DEFAULT_USERS = [
 ]
 
 
-async def seed(db):
+async def seed(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
     mongo = MongoHelper(db=db, allowed_collections={"users"})
     existing = await db["users"].count_documents({})
 

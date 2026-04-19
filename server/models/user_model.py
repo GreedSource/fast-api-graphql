@@ -1,7 +1,7 @@
 import re
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
-from gridfs.grid_file import ObjectId
+from bson import ObjectId
 from pydantic import (
     BaseModel,
     EmailStr,
@@ -26,11 +26,11 @@ class RegisterModel(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def trim_all_str_fields(cls, values: dict) -> dict:
+    def trim_all_str_fields(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         return {k: v.strip() if isinstance(v, str) else v for k, v in values.items()}
 
     @model_validator(mode="after")
-    def check_password_match(self):
+    def check_password_match(self) -> "RegisterModel":
         if self.password != self.confirm_password:
             raise CustomGraphQLExceptionHelper("Password mismatch.")
         self.password = hash_password(self.password)
@@ -38,7 +38,7 @@ class RegisterModel(BaseModel):
         return self
 
     @field_validator("password", "confirm_password")
-    def strong_password(cls, v):
+    def strong_password(cls, v: str) -> str:
         # Al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo
         pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
         if not re.match(pattern, v):
@@ -60,11 +60,11 @@ class ResetPasswordModel(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def trim_all_str_fields(cls, values: dict) -> dict:
+    def trim_all_str_fields(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         return {k: v.strip() if isinstance(v, str) else v for k, v in values.items()}
 
     @model_validator(mode="after")
-    def check_password_match(self):
+    def check_password_match(self) -> "ResetPasswordModel":
         if self.password != self.confirm_password:
             raise CustomGraphQLExceptionHelper("Password mismatch.")
         self.password = hash_password(self.password)
@@ -72,7 +72,7 @@ class ResetPasswordModel(BaseModel):
         return self
 
     @field_validator("password", "confirm_password")
-    def strong_password(cls, v):
+    def strong_password(cls, v: str) -> str:
         # Al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo
         pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
         if not re.match(pattern, v):
@@ -95,7 +95,7 @@ class UpdateUserModel(BaseModel):
 
     @field_validator("role_id")
     @classmethod
-    def validate_role_id(cls, value):
+    def validate_role_id(cls, value: Optional[str]) -> Optional[str]:
         if value is None:
             return value
         if not ObjectId.is_valid(value):
@@ -115,7 +115,7 @@ class UserItemModel(BaseModel):
     role: Optional[RoleItemModel] = Field(None, description="User role")
 
     @field_validator("id", mode="before")
-    def validate_id(cls, v, info: ValidationInfo):
+    def validate_id(cls, v: str, info: ValidationInfo) -> str:
         if not ObjectId.is_valid(v):
             raise CustomGraphQLExceptionHelper(f"{info.field_name} not valid.")
         return str(v)
@@ -126,5 +126,5 @@ class UserItemModel(BaseModel):
 
 
 # Crear un modelo que sea una lista de UserItemModel
-class UserListModel(RootModel):
-    root: List[UserItemModel]  # <--- lista de usuarios
+class UserListModel(RootModel[List[UserItemModel]]):
+    pass

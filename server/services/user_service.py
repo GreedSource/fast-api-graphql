@@ -1,3 +1,5 @@
+from typing import Any, Dict, List, cast
+
 from server.decorators.singleton_decorator import singleton
 
 # from server.helpers.mail_helper import MailHelper
@@ -11,7 +13,7 @@ from server.services.role_service import RoleService
 
 @singleton
 class UserService:
-    def __init__(self):
+    def __init__(self) -> None:
         self.__repository = UserRepository()
         self.__role_service = RoleService()
         self.__redis = RedisHelper()
@@ -21,17 +23,20 @@ class UserService:
     # Actions
     # -----------------
 
-    async def get_users(self):
+    async def get_users(self) -> List[Dict[str, Any]]:
         users = await self.__repository.aggregate_users_with_roles()
-        return UserListModel(users).model_dump(by_alias=False)
+        return cast(
+            List[Dict[str, Any]],
+            UserListModel.model_validate(users).model_dump(by_alias=False),
+        )
 
-    async def get_user(self, user_id: str):
+    async def get_user(self, user_id: str) -> Dict[str, Any] | None:
         user = await self.__repository.aggregate_user_with_role_permissions(user_id)
         if not user:
             return None
         return UserItemModel(**user).model_dump(by_alias=False)
 
-    async def update_user(self, user_id: str, update_data: dict):
+    async def update_user(self, user_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
         role_id = update_data.get("role_id")
         if role_id:
             role = await self.__role_service.get_role(role_id)
@@ -42,10 +47,12 @@ class UserService:
             await self.__repository.update(user_id, update_data)
 
         user = await self.__repository.aggregate_user_with_role_permissions(user_id)
+        if user is None:
+            raise CustomGraphQLExceptionHelper("User not found after update")
         payload = UserItemModel(**user).model_dump(by_alias=False)
         await self.__redis.publish_json(f"user_updated:{user_id}", payload)
         return payload
 
-    async def delete_user(self, user_id: str):
-        result = await self.__repository.delete(user_id)
-        return result.deleted_count == 1
+    async def delete_user(self, user_id: str) -> bool:
+        result: bool = await self.__repository.delete(user_id) > 0
+        return result

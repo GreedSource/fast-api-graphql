@@ -1,16 +1,45 @@
+from typing import Any
+
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from server.helpers.logger_helper import LoggerHelper
 from server.helpers.mongo_helper import MongoHelper
 
 DEFAULT_MODULES = [
-    {"name": "Usuarios", "key": "users", "description": "Gestión de usuarios", "active": True},
-    {"name": "Roles", "key": "roles", "description": "Gestión de roles", "active": True},
-    {"name": "Permisos", "key": "permissions", "description": "Gestión de permisos", "active": True},
-    {"name": "Módulos", "key": "modules", "description": "Activar módulos", "active": True},
-    {"name": "Acciones", "key": "actions", "description": "Gestión de acciones", "active": True},
+    {
+        "name": "Usuarios",
+        "key": "users",
+        "description": "Gestión de usuarios",
+        "active": True,
+    },
+    {
+        "name": "Roles",
+        "key": "roles",
+        "description": "Gestión de roles",
+        "active": True,
+    },
+    {
+        "name": "Permisos",
+        "key": "permissions",
+        "description": "Gestión de permisos",
+        "active": True,
+    },
+    {
+        "name": "Módulos",
+        "key": "modules",
+        "description": "Activar módulos",
+        "active": True,
+    },
+    {
+        "name": "Acciones",
+        "key": "actions",
+        "description": "Gestión de acciones",
+        "active": True,
+    },
 ]
 
 
-async def seed(db):
+async def seed(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
     mongo = MongoHelper(db=db, allowed_collections={"modules"})
     existing = await db["modules"].count_documents({})
 

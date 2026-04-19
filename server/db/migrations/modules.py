@@ -1,10 +1,14 @@
+from typing import Any, Dict
+
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from server.helpers.mongo_helper import MongoHelper
 
 MIGRATION_NAME = "0003_modules"
 MIGRATION_DESCRIPTION = "Crear índices y validación de módulos"
 
 
-def _default_validator():
+def _default_validator() -> Dict[str, Any]:
     return {
         "$jsonSchema": {
             "bsonType": "object",
@@ -21,7 +25,7 @@ def _default_validator():
     }
 
 
-async def upgrade(db):
+async def upgrade(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
     mongo = MongoHelper(db=db, allowed_collections={"modules"})
     await mongo.create_index("modules", [("name", 1)], unique=True, name="modules_name_unique_idx")
     await mongo.create_index("modules", [("key", 1)], unique=True, name="modules_key_unique_idx")

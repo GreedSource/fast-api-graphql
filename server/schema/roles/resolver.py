@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from ariadne import MutationType, QueryType
 from graphql import GraphQLResolveInfo
 
@@ -8,13 +10,14 @@ from server.models.response_model import ResponseModel
 from server.models.role_model import (
     CreateRoleModel,
     RoleItemModel,
+    RoleListModel,
     UpdateRoleModel,
 )
 from server.services.role_service import RoleService
 
 
 class RoleResolver:
-    def __init__(self):
+    def __init__(self) -> None:
         self.query = QueryType()
         self.mutation = MutationType()
 
@@ -29,11 +32,11 @@ class RoleResolver:
     # Bindings
     # -----------------
 
-    def _bind_queries(self):
+    def _bind_queries(self) -> None:
         self.query.set_field("roles", self.resolve_roles)
         self.query.set_field("role", self.resolve_role)
 
-    def _bind_mutations(self):
+    def _bind_mutations(self) -> None:
         self.mutation.set_field("createRole", self.resolve_create)
         self.mutation.set_field("updateRole", self.resolve_update)
         self.mutation.set_field("deleteRole", self.resolve_delete)
@@ -46,7 +49,9 @@ class RoleResolver:
 
     @require_token
     @require_permission(type="roles", action="create")
-    async def resolve_create(self, _, info: GraphQLResolveInfo, input):
+    async def resolve_create(
+        self, _: object, info: GraphQLResolveInfo, input: Dict[str, Any]
+    ) -> ResponseModel[RoleItemModel]:
         model = CreateRoleModel(**input)
         response = await self.__service.create(model)
 
@@ -58,7 +63,9 @@ class RoleResolver:
 
     @require_token
     @require_permission(type="roles", action="update")
-    async def resolve_update(self, _, info: GraphQLResolveInfo, input):
+    async def resolve_update(
+        self, _: object, info: GraphQLResolveInfo, input: Dict[str, Any]
+    ) -> ResponseModel[RoleItemModel]:
         model = UpdateRoleModel(**input)
         response = await self.__service.update(model)
         return ResponseModel[RoleItemModel](
@@ -69,7 +76,7 @@ class RoleResolver:
 
     @require_token
     @require_permission(type="roles", action="delete")
-    async def resolve_delete(self, _, info: GraphQLResolveInfo, id: str):
+    async def resolve_delete(self, _: object, info: GraphQLResolveInfo, id: str) -> ResponseModel[bool]:
         result = await self.__service.delete_role(id)
 
         return ResponseModel[bool](
@@ -80,7 +87,14 @@ class RoleResolver:
 
     @require_token
     @require_permission(type="roles", action="update")
-    async def resolve_add_permissions(self, _, __, info: GraphQLResolveInfo, roleId: str, permissionIds: list[str]):
+    async def resolve_add_permissions(
+        self,
+        _: object,
+        __: object,
+        info: GraphQLResolveInfo,
+        roleId: str,
+        permissionIds: list[str],
+    ) -> ResponseModel[bool]:
         await self.__service.add_permissions(roleId, permissionIds)
         return ResponseModel[bool](
             status=200,
@@ -90,7 +104,14 @@ class RoleResolver:
 
     @require_token
     @require_permission(type="roles", action="update")
-    async def resolve_remove_permissions(self, _, __, info: GraphQLResolveInfo, roleId: str, permissionIds: list[str]):
+    async def resolve_remove_permissions(
+        self,
+        _: object,
+        __: object,
+        info: GraphQLResolveInfo,
+        roleId: str,
+        permissionIds: list[str],
+    ) -> ResponseModel[bool]:
         await self.__service.remove_permissions(roleId, permissionIds)
         return ResponseModel[bool](
             status=200,
@@ -104,10 +125,10 @@ class RoleResolver:
 
     @require_token
     @require_permission(type="roles", action="read")
-    async def resolve_roles(self, *_):
+    async def resolve_roles(self, _: object, info: GraphQLResolveInfo) -> ResponseModel[RoleListModel]:
         roles = await self.__service.get_roles()
 
-        return ResponseModel[list[RoleItemModel]](
+        return ResponseModel[RoleListModel](
             status=200,
             message="Roles fetched successfully",
             data=roles,
@@ -115,7 +136,7 @@ class RoleResolver:
 
     @require_token
     @require_permission(type="roles", action="read")
-    async def resolve_role(self, _, __, id: str):
+    async def resolve_role(self, _: object, info: GraphQLResolveInfo, id: str) -> ResponseModel[RoleItemModel]:
         role = await self.__service.get_role(id)
 
         return ResponseModel[RoleItemModel](
@@ -128,5 +149,5 @@ class RoleResolver:
     # Export
     # -----------------
 
-    def get_resolvers(self):
+    def get_resolvers(self) -> list[QueryType | MutationType]:
         return [self.query, self.mutation]

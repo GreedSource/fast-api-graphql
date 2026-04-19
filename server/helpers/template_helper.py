@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any, Dict
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -8,7 +9,7 @@ from server.decorators.singleton_decorator import singleton
 
 @singleton
 class TemplateHelper:
-    def init_app(self):
+    def init_app(self) -> None:
         self.env = Environment(
             loader=FileSystemLoader("server/templates"),
             autoescape=select_autoescape(["html", "xml"]),
@@ -22,5 +23,6 @@ class TemplateHelper:
             now=lambda: datetime.now(),
         )
 
-    def render(self, template_name: str, context: dict):
-        return self.env.get_template(template_name).render(**context)
+    def render(self, template_name: str, context: Dict[str, Any]) -> str:
+        template: str = self.env.get_template(template_name).render(**context)
+        return template

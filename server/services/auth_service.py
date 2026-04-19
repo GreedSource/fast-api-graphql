@@ -1,4 +1,7 @@
 # server/services/auth_service.py
+from typing import Any, Dict
+
+from fastapi import BackgroundTasks
 
 from server.config.settings import settings
 from server.decorators.singleton_decorator import singleton
@@ -21,7 +24,7 @@ from server.utils.auth_utils import (
 
 @singleton
 class AuthService:
-    def __init__(self):
+    def __init__(self) -> None:
         self.__repository = UserRepository()
 
         self.__mail_helper = MailHelper()
@@ -32,7 +35,7 @@ class AuthService:
     # Actions
     # -----------------
 
-    async def register(self, user_data: dict):
+    async def register(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
         inserted_id = await self.__repository.create(user_data)
         user_data["_id"] = inserted_id
         user = UserItemModel(**user_data).model_dump()
@@ -44,7 +47,7 @@ class AuthService:
             "refreshToken": refresh_token,
         }
 
-    async def login(self, email: str, password: str):
+    async def login(self, email: str, password: str) -> Dict[str, Any]:
         user = await self.__repository.find_by_email(email)
 
         if not user or not verify_password(password, user["password"]):
@@ -59,10 +62,10 @@ class AuthService:
             "refreshToken": refresh_token,
         }
 
-    async def refresh_token(self, refresh_token: str):
+    async def refresh_token(self, refresh_token: str) -> Dict[str, Any]:
         payload = verify_refresh_token(refresh_token)
 
-        user = await self.__repository.find_by_id(payload.get("id"))
+        user = await self.__repository.find_by_id(payload["id"])
         if not user:
             raise CustomGraphQLExceptionHelper("Usuario no encontrado")
         user = UserItemModel(**user).model_dump()
@@ -74,10 +77,10 @@ class AuthService:
             "refreshToken": refresh_token,
         }
 
-    async def logout(self):
+    async def logout(self) -> bool:
         return True
 
-    async def recover_password(self, email: str, background_tasks):
+    async def recover_password(self, email: str, background_tasks: BackgroundTasks) -> bool:
         user = await self.__repository.find_by_email(email)
         if not user:
             LoggerHelper.warning(f"Password recovery attempted for non-existent email: {email}")
@@ -105,7 +108,7 @@ class AuthService:
 
         return True
 
-    async def reset_password(self, token: str, new_password: str):
+    async def reset_password(self, token: str, new_password: str) -> bool:
         try:
             payload = verify_token(token)
             email = payload.get("email")

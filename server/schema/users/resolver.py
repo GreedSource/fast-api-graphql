@@ -1,5 +1,8 @@
 # server/schema/users/resolver.py
+from typing import Any, AsyncGenerator, Dict
+
 from ariadne import MutationType, QueryType, SubscriptionType
+from graphql import GraphQLResolveInfo
 
 from server.decorators.require_permission_decorator import require_permission
 from server.decorators.require_token_decorator import require_token
@@ -8,12 +11,12 @@ from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptio
 from server.helpers.logger_helper import LoggerHelper
 from server.helpers.redis_helper import RedisHelper
 from server.models.response_model import ResponseModel
-from server.models.user_model import UpdateUserModel
+from server.models.user_model import UpdateUserModel, UserItemModel, UserListModel
 from server.services.user_service import UserService
 
 
 class UserResolver:
-    def __init__(self):
+    def __init__(self) -> None:
         self.query = QueryType()
         self.mutation = MutationType()
         self.subscription = SubscriptionType()
@@ -31,15 +34,15 @@ class UserResolver:
     # Bindings
     # -----------------
 
-    def _bind_queries(self):
+    def _bind_queries(self) -> None:
         self.query.set_field("users", self.resolve_users)
         self.query.set_field("user", self.resolve_user)
 
-    def _bind_mutations(self):
+    def _bind_mutations(self) -> None:
         self.mutation.set_field("updateUser", self.resolve_update_user)
         self.mutation.set_field("deleteUser", self.resolve_delete_user)
 
-    def _bind_subscriptions(self):
+    def _bind_subscriptions(self) -> None:
         self.subscription.set_source("userUpdated", self.user_updated_source)
         self.subscription.set_field("userUpdated", self.resolve_user_updated)
 
@@ -49,7 +52,7 @@ class UserResolver:
 
     @require_token
     @require_permission(type="users", action="read")
-    async def resolve_users(self, _, info):
+    async def resolve_users(self, _: object, info: GraphQLResolveInfo) -> ResponseModel[UserListModel]:
         response = await self.user_service.get_users()
         return ResponseModel(
             status=200,
@@ -59,7 +62,7 @@ class UserResolver:
 
     @require_token
     @require_permission(type="users", action="read")
-    async def resolve_user(self, _, info, id):
+    async def resolve_user(self, _: object, info: GraphQLResolveInfo, id: str) -> ResponseModel[UserItemModel]:
         user = await self.user_service.get_user(id)
         return ResponseModel(
             status=200,
@@ -73,7 +76,9 @@ class UserResolver:
 
     @require_token
     @require_permission(type="users", action="update")
-    async def resolve_update_user(self, _, info, input):
+    async def resolve_update_user(
+        self, _: object, info: GraphQLResolveInfo, input: Dict[str, Any]
+    ) -> ResponseModel[UserItemModel]:
         model = UpdateUserModel(**input)
         update_data = model.model_dump(exclude_unset=True)
 
@@ -86,14 +91,16 @@ class UserResolver:
 
     @require_token
     @require_permission(type="users", action="delete")
-    async def resolve_delete_user(self, _, info, id):
+    async def resolve_delete_user(self, _: object, info: GraphQLResolveInfo, id: str) -> ResponseModel[bool]:
         return ResponseModel(
             status=200,
             message="User deleted successfully",
             data=await self.user_service.delete_user(id),
         )
 
-    async def user_updated_source(self, _, info, userId):
+    async def user_updated_source(
+        self, _: object, info: GraphQLResolveInfo, userId: str
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         if not info.context.get("current_user"):
             raise CustomGraphQLExceptionHelper(
                 "Authentication required",
@@ -103,12 +110,17 @@ class UserResolver:
         async for payload in self.redis_helper.subscribe(f"user_updated:{userId}"):
             yield payload
 
-    def resolve_user_updated(self, payload, info, userId):
+    def resolve_user_updated(
+        self,
+        payload: Dict[str, Any],
+        info: GraphQLResolveInfo,
+        userId: str,
+    ) -> Dict[str, Any]:
         return payload
 
     # -----------------
     # Export
     # -----------------
 
-    def get_resolvers(self):
+    def get_resolvers(self) -> list[QueryType | MutationType | SubscriptionType]:
         return [self.query, self.mutation, self.subscription]

@@ -1,6 +1,8 @@
 import json
 import logging
+from contextlib import asynccontextmanager
 from http.cookies import SimpleCookie
+from typing import Any, AsyncGenerator, Dict, Protocol, cast
 
 from ariadne import graphql
 from ariadne.explorer import ExplorerGraphiQL
@@ -29,16 +31,21 @@ from server.utils.custom_error_formatter_utils import custom_format_error
 # Desactivar logs ruidosos de ariadne
 logging.getLogger("ariadne").setLevel(logging.CRITICAL)
 
-explorer_html = ExplorerGraphiQL().html(None)
+
+class _TypedExplorerHTML(Protocol):
+    def html(self, request: object | None) -> str: ...
+
+
+explorer_html = cast(_TypedExplorerHTML, ExplorerGraphiQL()).html(None)
 
 
 class WebSocketRequestAdapter:
-    def __init__(self, headers: dict[str, str], cookies: dict[str, str]):
+    def __init__(self, headers: Dict[str, Any], cookies: Dict[str, Any]) -> None:
         self.headers = headers
         self.cookies = cookies
 
 
-def _parse_ws_cookies(websocket: WebSocket) -> dict[str, str]:
+def _parse_ws_cookies(websocket: WebSocket) -> Dict[str, Any]:
     cookie_header = websocket.headers.get("cookie", "")
     if not cookie_header:
         return {}
@@ -48,16 +55,27 @@ def _parse_ws_cookies(websocket: WebSocket) -> dict[str, str]:
     return {key: morsel.value for key, morsel in cookie.items()}
 
 
-async def _build_ws_auth_context(websocket: WebSocket, payload: dict | None = None) -> dict:
+def get_str(d: Dict[str, Any], key: str) -> str | None:
+    value = d.get(key)
+    return value if isinstance(value, str) else None
+
+
+async def _build_ws_auth_context(websocket: WebSocket, payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
     payload = payload or {}
     connection_headers = payload.get("headers") or {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    if not isinstance(connection_headers, dict):
+        connection_headers = {}
+
     auth_header = (
-        payload.get("authorization")
-        or payload.get("Authorization")
-        or payload.get("authToken")
-        or payload.get("token")
-        or connection_headers.get("authorization")
-        or connection_headers.get("Authorization")
+        get_str(payload, "authorization")
+        or get_str(payload, "Authorization")
+        or get_str(payload, "authToken")
+        or get_str(payload, "token")
+        or get_str(connection_headers, "authorization")
+        or get_str(connection_headers, "Authorization")
     )
 
     ws_headers = {key: value for key, value in websocket.headers.items()}
@@ -99,8 +117,20 @@ async def _build_ws_auth_context(websocket: WebSocket, payload: dict | None = No
     return context
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # Startup
+    LoggerHelper.info("Starting up application...")
+    yield
+    # Shutdown
+    LoggerHelper.info("Shutting down application...")
+    await RedisHelper().close()
+    await close_mongo()
+    LoggerHelper.info("Application shutdown complete")
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
+    app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan)
 
     # ✅ Inicializar MailHelper AQUÍ
     MailHelper().init_app()
@@ -122,20 +152,20 @@ def create_app() -> FastAPI:
 
     # Rutas
     @app.get("/")
-    async def root():
+    async def root() -> Dict[str, Any]:
         return {"status": "Ok", "message": "Welcome!!"}
 
     @app.get("/ping")
-    async def health_check():
+    async def health_check() -> Dict[str, Any]:
         return {"status": "Ok", "message": "Pong"}
 
     @app.get("/graphql")
-    async def graphql_explorer():
+    async def graphql_explorer() -> HTMLResponse:
         return HTMLResponse(explorer_html)
 
     # GraphQL endpoint
     @app.post("/graphql")
-    async def graphql_server(request: Request, response: Response, background_tasks: BackgroundTasks):
+    async def graphql_server(request: Request, response: Response, background_tasks: BackgroundTasks) -> Response:
         data = await request.json()
         operation_name = data.get("operationName", "unnamed")
 
@@ -170,7 +200,7 @@ def create_app() -> FastAPI:
         return response
 
     @app.websocket("/graphql")
-    async def graphql_websocket(websocket: WebSocket):
+    async def graphql_websocket(websocket: WebSocket) -> None:
         """GraphQL WebSocket subscriptions (graphql-transport-ws protocol)"""
         await websocket.accept(subprotocol="graphql-transport-ws")
         LoggerHelper.info(f"WS connected from {websocket.client}")
@@ -263,13 +293,6 @@ def create_app() -> FastAPI:
                 await websocket.close(code=close_code)
             except Exception:
                 pass
-
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        LoggerHelper.info("Shutting down application...")
-        await RedisHelper().close()
-        await close_mongo()
-        LoggerHelper.info("Application shutdown complete")
 
     return app
 

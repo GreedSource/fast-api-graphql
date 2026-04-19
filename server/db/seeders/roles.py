@@ -1,13 +1,27 @@
+from typing import Any
+
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from server.helpers.logger_helper import LoggerHelper
 from server.helpers.mongo_helper import MongoHelper
 
 DEFAULT_ROLES = [
-    {"name": "admin", "description": "Administrador del sistema", "active": True, "permissions": []},
-    {"name": "user", "description": "Usuario estándar", "active": True, "permissions": []},
+    {
+        "name": "admin",
+        "description": "Administrador del sistema",
+        "active": True,
+        "permissions": [],
+    },
+    {
+        "name": "user",
+        "description": "Usuario estándar",
+        "active": True,
+        "permissions": [],
+    },
 ]
 
 
-async def seed(db):
+async def seed(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
     mongo = MongoHelper(db=db, allowed_collections={"roles"})
     existing = await db["roles"].count_documents({})
 

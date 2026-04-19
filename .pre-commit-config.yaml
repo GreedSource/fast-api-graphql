@@ -16,9 +16,13 @@ repos:
     hooks:
       - id: mypy
         name: mypy-type-check
-        additional_dependencies: []
-        args: ['--config-file=mypy.ini']
+        args: ['--config-file=mypy.ini', 'server']
         pass_filenames: false
+        additional_dependencies:
+          - pydantic
+          - pydantic_settings
+          - redis
+          - types-redis
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

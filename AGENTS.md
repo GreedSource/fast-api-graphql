@@ -87,7 +87,7 @@ Regla de diseño:
 
 **`@require_permissions(permissions, mode)`** (`server/decorators/require_permission_decorator.py`):
 - Verifica múltiples permisos simultáneamente
-- `permissions`: lista de dicts `[{"type": "users", "action": "create"}, ...]`
+- `permissions`: lista de Dict[str, Any]s `[{"type": "users", "action": "create"}, ...]`
 - `mode`: `PermissionCheckMode.ANY` (basta uno) o `PermissionCheckMode.ALL` (todos requeridos)
 
 Ejemplo de uso en resolvers:

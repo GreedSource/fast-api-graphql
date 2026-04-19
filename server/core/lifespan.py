@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from typing import Any, AsyncGenerator, Mapping
 
 from fastapi import FastAPI
 
@@ -8,7 +9,7 @@ from server.helpers.mongo_helper import MongoHelper
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
     LoggerHelper.info("Starting application...")
 
     db = get_mongo_db()
@@ -17,54 +18,34 @@ async def lifespan(app: FastAPI):
         db=db,
         allowed_collections={"users", "roles", "modules", "actions", "permissions"},
     )
+    index_options: Mapping[str, Any] = {"unique": True}
+    await mongo.create_index(
+        collection_name="users", keys=[("email", 1)], name="users_email_unique_idx", **index_options
+    )
+
+    await mongo.create_index(collection_name="roles", keys=[("name", 1)], name="roles_name_unique_idx", **index_options)
 
     await mongo.create_index(
-        collection_name="users",
-        keys=[("email", 1)],
-        unique=True,
-        name="users_email_unique_idx",
+        collection_name="modules", keys=[("name", 1)], name="modules_name_unique_idx", **index_options
     )
 
     await mongo.create_index(
-        collection_name="roles",
-        keys=[("name", 1)],
-        unique=True,
-        name="roles_name_unique_idx",
+        collection_name="modules", keys=[("key", 1)], name="modules_key_unique_idx", **index_options
     )
 
     await mongo.create_index(
-        collection_name="modules",
-        keys=[("name", 1)],
-        unique=True,
-        name="modules_name_unique_idx",
+        collection_name="actions", keys=[("name", 1)], name="actions_name_unique_idx", **index_options
     )
 
     await mongo.create_index(
-        collection_name="modules",
-        keys=[("key", 1)],
-        unique=True,
-        name="modules_key_unique_idx",
-    )
-
-    await mongo.create_index(
-        collection_name="actions",
-        keys=[("name", 1)],
-        unique=True,
-        name="actions_name_unique_idx",
-    )
-
-    await mongo.create_index(
-        collection_name="actions",
-        keys=[("key", 1)],
-        unique=True,
-        name="actions_key_unique_idx",
+        collection_name="actions", keys=[("key", 1)], name="actions_key_unique_idx", **index_options
     )
 
     await mongo.create_index(
         collection_name="permissions",
         keys=[("action_id", 1), ("module_id", 1)],
-        unique=True,
         name="permission_unique_idx",
+        **index_options,
     )
 
     LoggerHelper.success("MongoDB ready")

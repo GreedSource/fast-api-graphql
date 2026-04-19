@@ -1,5 +1,8 @@
 # server/repositories/role_repository.py
+from typing import Any, Dict, List
+
 from bson import ObjectId
+from pymongo.results import DeleteResult
 
 from server.db.mongo import get_mongo_db
 from server.decorators.singleton_decorator import singleton
@@ -9,18 +12,19 @@ from server.helpers.mongo_helper import MongoHelper
 
 @singleton
 class RoleRepository:
-    def __init__(self):
+    def __init__(self) -> None:
         self.__mongo = MongoHelper(
             db=get_mongo_db(),
             allowed_collections={"roles"},
         )
         LoggerHelper.info("RoleRepository initialized")
 
-    async def create(self, role_data: dict):
-        return await self.__mongo.insert_one("roles", role_data)
+    async def create(self, role_data: Dict[str, Any]) -> str:
+        result = await self.__mongo.insert_one("roles", role_data)
+        return str(result.inserted_id)
 
-    def _build_role_pipeline(self, role_id: str | None = None):
-        pipeline = []
+    def _build_role_pipeline(self, role_id: str | None = None) -> List[Dict[str, Any]]:
+        pipeline: List[Dict[str, Any]] = []
 
         if role_id:
             pipeline.append({"$match": {"_id": ObjectId(role_id)}})
@@ -123,17 +127,17 @@ class RoleRepository:
 
         return pipeline
 
-    async def find_by_id(self, role_id: str):
+    async def find_by_id(self, role_id: str) -> Dict[str, Any] | None:
         roles = await self.__mongo.aggregate("roles", self._build_role_pipeline(role_id))
         return roles[0] if roles else None
 
-    async def find_by_name(self, name: str):
+    async def find_by_name(self, name: str) -> Dict[str, Any] | None:
         return await self.__mongo.find_one("roles", {"name": name})
 
-    async def find_all(self):
+    async def find_all(self) -> List[Dict[str, Any]]:
         return await self.__mongo.aggregate("roles", self._build_role_pipeline())
 
-    async def update(self, role_id: str, update_data: dict):
+    async def update(self, role_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
         return await self.__mongo.update_one(
             "roles",
             {"_id": ObjectId(role_id)},
@@ -143,8 +147,8 @@ class RoleRepository:
     async def add_permissions(
         self,
         role_id: str,
-        permission_ids: list[str],
-    ):
+        permission_ids: List[str],
+    ) -> Dict[str, Any]:
         object_ids = [ObjectId(pid) for pid in permission_ids]
 
         return await self.__mongo.update_one(
@@ -157,7 +161,7 @@ class RoleRepository:
         self,
         role_id: str,
         permission_ids: list[str],
-    ):
+    ) -> Dict[str, Any]:
         object_ids = [ObjectId(pid) for pid in permission_ids]
 
         return await self.__mongo.update_one(
@@ -166,7 +170,7 @@ class RoleRepository:
             {"$pull": {"permissions": {"$in": object_ids}}},
         )
 
-    async def delete(self, role_id: str):
+    async def delete(self, role_id: str) -> DeleteResult:
         return await self.__mongo.delete_one(
             "roles",
             {"_id": ObjectId(role_id)},

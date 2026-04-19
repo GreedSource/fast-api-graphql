@@ -1,15 +1,39 @@
+from typing import Any
+
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from server.helpers.logger_helper import LoggerHelper
 from server.helpers.mongo_helper import MongoHelper
 
 DEFAULT_ACTIONS = [
-    {"name": "Crear", "key": "create", "description": "Permite crear entidades", "active": True},
-    {"name": "Leer", "key": "read", "description": "Permite leer entidades", "active": True},
-    {"name": "Actualizar", "key": "update", "description": "Permite actualizar entidades", "active": True},
-    {"name": "Eliminar", "key": "delete", "description": "Permite eliminar entidades", "active": True},
+    {
+        "name": "Crear",
+        "key": "create",
+        "description": "Permite crear entidades",
+        "active": True,
+    },
+    {
+        "name": "Leer",
+        "key": "read",
+        "description": "Permite leer entidades",
+        "active": True,
+    },
+    {
+        "name": "Actualizar",
+        "key": "update",
+        "description": "Permite actualizar entidades",
+        "active": True,
+    },
+    {
+        "name": "Eliminar",
+        "key": "delete",
+        "description": "Permite eliminar entidades",
+        "active": True,
+    },
 ]
 
 
-async def seed(db):
+async def seed(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
     mongo = MongoHelper(db=db, allowed_collections={"actions"})
     existing = await db["actions"].count_documents({})
 

@@ -1,30 +1,30 @@
-from typing import List, Optional
+from typing import cast
 
 from bson import ObjectId
 from pydantic import BaseModel, Field, RootModel, field_validator
 
 
 class ModuleItemModel(BaseModel):
-    id: Optional[str] = Field(None, alias="_id")
+    id: str | None = Field(None, alias="_id")
     name: str
     key: str
-    description: Optional[str]
+    description: str | None
     active: bool = True
 
     model_config = {"populate_by_name": True}
 
     @field_validator("id", mode="before")
     @classmethod
-    def cast_object_id(cls, value):
+    def cast_object_id(cls, value: object) -> str | None:
         if value is None:
             return value
         if isinstance(value, ObjectId):
             return str(value)
-        return value
+        return cast(str, value)
 
 
-class ModuleListModel(RootModel):
-    root: List[ModuleItemModel]
+class ModuleListModel(RootModel[list[ModuleItemModel]]):
+    root: list[ModuleItemModel]
 
 
 class CreateModuleModel(BaseModel):
@@ -32,7 +32,6 @@ class CreateModuleModel(BaseModel):
         ...,
         min_length=1,
         max_length=100,
-        strip_whitespace=True,
         description="Nombre visible del módulo",
     )
 
@@ -40,14 +39,12 @@ class CreateModuleModel(BaseModel):
         ...,
         min_length=1,
         max_length=50,
-        strip_whitespace=True,
         description="Identificador único del módulo",
     )
 
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         max_length=255,
-        strip_whitespace=True,
         description="Descripción del módulo",
     )
 
@@ -60,15 +57,26 @@ class CreateModuleModel(BaseModel):
 
 
 class UpdateModuleModel(BaseModel):
-    id: str = Field(..., strip_whitespace=True, description="ID del módulo")
+    id: str = Field(..., description="ID del módulo")
 
-    name: Optional[str] = Field(default=None, min_length=1, max_length=100, strip_whitespace=True)
+    name: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=100,
+    )
 
-    key: Optional[str] = Field(default=None, min_length=1, max_length=50, strip_whitespace=True)
+    key: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=50,
+    )
 
-    description: Optional[str] = Field(default=None, max_length=255, strip_whitespace=True)
+    description: str | None = Field(
+        default=None,
+        max_length=255,
+    )
 
-    active: Optional[bool] = Field(default=None)
+    active: bool | None = Field(default=None)
 
     @field_validator("key")
     @classmethod

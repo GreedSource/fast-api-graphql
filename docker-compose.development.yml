@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: dockerfile
-    container_name: graphql_api
+    container_name: graphql_api_dev
     restart: unless-stopped
     image: graphql_api:latest
     volumes:
@@ -17,32 +17,32 @@ services:
     environment:
       - WATCHFILES_FORCE_POLLING=true
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - UVICORN_WORKERS=${UVICORN_WORKERS:-4}
+      - UVICORN_WORKERS=1
     depends_on:
       - mongo
       - redis
     command: >
-      sh -c "python manage.py migrate && python manage.py seed-all && uvicorn app:app --host 0.0.0.0 --port $PORT --workers ${UVICORN_WORKERS:-4} --ws websockets --proxy-headers --timeout-graceful-shutdown 2"
+      sh -c "python manage.py migrate && if [ \"$RUN_SEEDERS\" = \"true\" ]; then python manage.py seed-all; fi && uvicorn app:app --host 0.0.0.0 --port $PORT --reload --workers 1 --ws websockets --proxy-headers --timeout-graceful-shutdown 2"
 
   mongo:
     image: mongo:7
-    container_name: mongodb
+    container_name: mongodb_dev
     restart: unless-stopped
     ports:
       - '27017:27017'
     volumes:
-      - mongo_data:/data/db
+      - mongo_data_dev:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
 
   redis:
     image: redis:7-alpine
-    container_name: redis
+    container_name: redis_dev
     restart: unless-stopped
     ports:
       - '6379:6379'
     command: redis-server --appendonly yes
 
 volumes:
-  mongo_data:
+  mongo_data_dev:

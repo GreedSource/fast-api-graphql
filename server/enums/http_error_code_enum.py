@@ -11,6 +11,6 @@ class HTTPErrorCode(Enum):
     INTERNAL_SERVER_ERROR = (500, "INTERNAL_SERVER_ERROR")
     SERVICE_UNAVAILABLE = (503, "SERVICE_UNAVAILABLE")
 
-    def __init__(self, status_code, code_name):
+    def __init__(self, status_code: int, code_name: str) -> None:
         self.status_code = status_code
         self.code_name = code_name

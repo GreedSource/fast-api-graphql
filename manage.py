@@ -6,49 +6,49 @@ from server.db.mongo import get_mongo_db
 from server.helpers.logger_helper import LoggerHelper
 
 
-async def _run_migrate():
+async def _run_migrate() -> None:
     from server.db.migrations import run_migrations
 
     db = get_mongo_db()
     await run_migrations(db)
 
 
-async def _run_seed_users():
+async def _run_seed_users() -> None:
     from server.db.seeders import seed_users
 
     db = get_mongo_db()
     await seed_users(db)
 
 
-async def _run_seed_modules():
+async def _run_seed_modules() -> None:
     from server.db.seeders import seed_modules
 
     db = get_mongo_db()
     await seed_modules(db)
 
 
-async def _run_seed_actions():
+async def _run_seed_actions() -> None:
     from server.db.seeders import seed_actions
 
     db = get_mongo_db()
     await seed_actions(db)
 
 
-async def _run_seed_permissions():
+async def _run_seed_permissions() -> None:
     from server.db.seeders import seed_permissions
 
     db = get_mongo_db()
     await seed_permissions(db)
 
 
-async def _run_seed_roles():
+async def _run_seed_roles() -> None:
     from server.db.seeders import seed_roles
 
     db = get_mongo_db()
     await seed_roles(db)
 
 
-async def _run_seed_all():
+async def _run_seed_all() -> None:
     if not settings.RUN_SEEDERS:
         LoggerHelper.info("RUN_SEEDERS=false, semilla global omitida.")
         return
@@ -59,7 +59,7 @@ async def _run_seed_all():
     await seed_all(db)
 
 
-async def _run_status():
+async def _run_status() -> None:
     db = get_mongo_db()
     migrations = await db["migrations"].find({}).to_list(length=100)
     LoggerHelper.info("Migraciones aplicadas:")
@@ -67,7 +67,7 @@ async def _run_status():
         LoggerHelper.info(f"- {m.get('name')} @ {m.get('applied_at')}")
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Gestor de migraciones y seeders para FastAPI GraphQL")
     parser.add_argument(
         "command",

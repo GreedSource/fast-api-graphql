@@ -1,3 +1,7 @@
+from typing import Any
+
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from server.helpers.logger_helper import LoggerHelper
 from server.helpers.mongo_helper import MongoHelper
 
@@ -26,7 +30,7 @@ DEFAULT_ROLE_PERMISSIONS = [
 ]
 
 
-async def seed(db):
+async def seed(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
     mongo = MongoHelper(db=db, allowed_collections={"permissions", "modules", "actions"})
     existing = await db["permissions"].count_documents({})
 

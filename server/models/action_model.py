@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from bson import ObjectId
 from pydantic import BaseModel, Field, RootModel, field_validator
@@ -15,7 +15,7 @@ class ActionItemModel(BaseModel):
 
     @field_validator("id", mode="before")
     @classmethod
-    def cast_object_id(cls, value):
+    def cast_object_id(cls, value: str | None) -> Optional[str]:
         if value is None:
             return value
         if isinstance(value, ObjectId):
@@ -23,8 +23,8 @@ class ActionItemModel(BaseModel):
         return value
 
 
-class ActionListModel(RootModel):
-    root: List[ActionItemModel]
+class ActionListModel(RootModel[list[ActionItemModel]]):
+    root: list[ActionItemModel]
 
 
 class CreateActionModel(BaseModel):
@@ -32,7 +32,6 @@ class CreateActionModel(BaseModel):
         ...,
         min_length=1,
         max_length=100,
-        strip_whitespace=True,
         description="Nombre visible del módulo",
     )
 
@@ -40,14 +39,12 @@ class CreateActionModel(BaseModel):
         ...,
         min_length=1,
         max_length=50,
-        strip_whitespace=True,
         description="Identificador único del módulo",
     )
 
     description: Optional[str] = Field(
         default=None,
         max_length=255,
-        strip_whitespace=True,
         description="Descripción del módulo",
     )
 

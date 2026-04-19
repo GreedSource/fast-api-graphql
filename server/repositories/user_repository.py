@@ -1,5 +1,8 @@
 # server/repositories/user_repository.py
+from typing import Any, Dict, List
+
 from bson import ObjectId
+from pymongo.results import DeleteResult
 
 from server.db.mongo import get_mongo_db
 from server.decorators.singleton_decorator import singleton
@@ -9,30 +12,31 @@ from server.helpers.mongo_helper import MongoHelper
 
 @singleton
 class UserRepository:
-    def __init__(self):
+    def __init__(self) -> None:
         self.__mongo = MongoHelper(
             db=get_mongo_db(),
             allowed_collections={"users"},
         )
         LoggerHelper.info("UserRepository initialized")
 
-    async def create(self, user_data: dict):
-        return await self.__mongo.insert_one("users", user_data)
+    async def create(self, user_data: Dict[str, Any]) -> str:
+        result = await self.__mongo.insert_one("users", user_data)
+        return str(result.inserted_id)
 
-    async def find_by_email(self, email: str):
+    async def find_by_email(self, email: str) -> Dict[str, Any] | None:
         return await self.__mongo.find_one("users", {"email": email})
 
-    async def find_by_id(self, user_id: str):
+    async def find_by_id(self, user_id: str) -> Dict[str, Any] | None:
         return await self.__mongo.find_one("users", {"_id": ObjectId(user_id)})
 
-    async def find_all(self):
+    async def find_all(self) -> list[Dict[str, Any]]:
         return await self.__mongo.find_many("users", {})
 
     # ----------------------
     # Aggregate: user + role
     # ----------------------
-    async def aggregate_users_with_roles(self):
-        pipeline = [
+    async def aggregate_users_with_roles(self) -> list[Dict[str, Any]]:
+        pipeline: List[Dict[str, Any]] = [
             {"$addFields": {"roleIdObj": {"$toObjectId": "$role_id"}}},
             {
                 "$lookup": {
@@ -78,8 +82,8 @@ class UserRepository:
 
         return await self.__mongo.aggregate("users", pipeline)
 
-    async def aggregate_user_with_role(self, user_id: str):
-        pipeline = [
+    async def aggregate_user_with_role(self, user_id: str) -> Dict[str, Any] | None:
+        pipeline: List[Dict[str, Any]] = [
             {"$match": {"_id": ObjectId(user_id)}},
             {
                 "$addFields": {
@@ -134,8 +138,8 @@ class UserRepository:
         results = await self.__mongo.aggregate("users", pipeline)
         return results[0] if results else None
 
-    async def aggregate_user_with_role_permissions(self, user_id: str):
-        pipeline = [
+    async def aggregate_user_with_role_permissions(self, user_id: str) -> Dict[str, Any] | None:
+        pipeline: List[Dict[str, Any]] = [
             # 1️⃣ Match usuario primero (mejor performance)
             {"$match": {"_id": ObjectId(user_id)}},
             # 2️⃣ Convertir role_id → ObjectId (solo si existe)
@@ -283,14 +287,14 @@ class UserRepository:
         results = await self.__mongo.aggregate("users", pipeline)
         return results[0] if results else None
 
-    async def update(self, user_id: str, update_data: dict):
+    async def update(self, user_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
         return await self.__mongo.update_one(
             "users",
             {"_id": ObjectId(user_id)},
             {"$set": update_data},
         )
 
-    async def delete(self, user_id: str):
+    async def delete(self, user_id: str) -> DeleteResult:
         return await self.__mongo.delete_one(
             "users",
             {"_id": ObjectId(user_id)},

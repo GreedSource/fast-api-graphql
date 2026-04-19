@@ -12,10 +12,10 @@ from server.helpers.logger_helper import LoggerHelper
 
 @singleton
 class MailHelper:
-    def __init__(self):
+    def __init__(self) -> None:
         self._initialized = False
 
-    def init_app(self):
+    def init_app(self) -> None:
         if self._initialized:
             return
 

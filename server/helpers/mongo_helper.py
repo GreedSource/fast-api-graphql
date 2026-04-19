@@ -1,5 +1,7 @@
+# ruff: noqa: ANN401
+
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List
 
 from motor.motor_asyncio import (
     AsyncIOMotorCollection,
@@ -7,6 +9,7 @@ from motor.motor_asyncio import (
 )
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError, PyMongoError
+from pymongo.results import DeleteResult, InsertOneResult
 
 from server.constants.error_messages import (
     DEFAULT_DUPLICATE_MESSAGE,
@@ -24,9 +27,9 @@ class MongoHelper:
 
     def __init__(
         self,
-        db: AsyncIOMotorDatabase,
-        allowed_collections: Optional[Set[str]] = None,
-    ):
+        db: AsyncIOMotorDatabase[dict[str, Any]],
+        allowed_collections: set[str] | None = None,
+    ) -> None:
         self.db = db
         self.allowed_collections = allowed_collections
         LoggerHelper.success("MongoHelper initialized with database: " + db.name)
@@ -42,7 +45,7 @@ class MongoHelper:
                 HTTPErrorCode.BAD_REQUEST,
             )
 
-    def get_collection(self, name: str) -> AsyncIOMotorCollection:
+    def get_collection(self, name: str) -> AsyncIOMotorCollection[dict[str, Any]]:
         self._check_collection_allowed(name)
         return self.db[name]
 
@@ -53,9 +56,9 @@ class MongoHelper:
     async def create_index(
         self,
         collection_name: str,
-        keys: List[tuple],
-        name: Optional[str] = None,
-        **kwargs,
+        keys: list[tuple[str, int | str]],
+        name: str | None = None,
+        **kwargs: Any,
     ) -> str:
         collection = self.get_collection(collection_name)
 
@@ -63,7 +66,7 @@ class MongoHelper:
             kwargs["name"] = name
 
         try:
-            index_name = await collection.create_index(keys, **kwargs)
+            index_name: str = await collection.create_index(keys, **kwargs)
             LoggerHelper.info(f"Índice creado: {index_name} en {collection_name}")
             return index_name
         except PyMongoError as e:
@@ -90,9 +93,9 @@ class MongoHelper:
     async def insert_one(
         self,
         collection_name: str,
-        document: Dict[str, Any],
-        **kwargs,
-    ):
+        document: dict[str, Any],
+        **kwargs: Any,
+    ) -> InsertOneResult:
         collection = self.get_collection(collection_name)
 
         now = datetime.now(timezone.utc)
@@ -101,7 +104,7 @@ class MongoHelper:
 
         try:
             result = await collection.insert_one(document, **kwargs)
-            return result.inserted_id
+            return result
         except DuplicateKeyError:
             message = DUPLICATE_ERROR_MESSAGES.get(collection_name, DEFAULT_DUPLICATE_MESSAGE)
             raise CustomGraphQLExceptionHelper(
@@ -119,13 +122,14 @@ class MongoHelper:
         self,
         collection_name: str,
         filter_: Dict[str, Any],
-        projection: Optional[Dict[str, Any]] = None,
-        **kwargs,
-    ) -> Optional[Dict[str, Any]]:
+        projection: Dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> Dict[str, Any] | None:
         collection = self.get_collection(collection_name)
 
         try:
-            return await collection.find_one(filter_, projection, **kwargs)
+            fetched: Dict[str, Any] | None = await collection.find_one(filter_, projection, **kwargs)
+            return fetched
         except PyMongoError as e:
             raise CustomGraphQLExceptionHelper(
                 f"Error al buscar documento: {e}",
@@ -135,13 +139,13 @@ class MongoHelper:
     async def find_many(
         self,
         collection_name: str,
-        filter_: Dict[str, Any],
-        projection: Optional[Dict[str, Any]] = None,
+        filter_: dict[str, Any],
+        projection: dict[str, Any] | None = None,
         skip: int = 0,
         limit: int = 0,
-        sort: Optional[List[tuple]] = None,
-        **kwargs,
-    ) -> List[Dict[str, Any]]:
+        sort: list[tuple[str, int | str]] | None = None,
+        **kwargs: Any,
+    ) -> list[dict[str, Any]]:
         collection = self.get_collection(collection_name)
 
         try:
@@ -153,8 +157,8 @@ class MongoHelper:
                 cursor = cursor.skip(skip)
             if limit:
                 cursor = cursor.limit(limit)
-
-            return await cursor.to_list(length=limit or None)
+            result: List[Dict[str, Any]] = await cursor.to_list(length=limit or None)
+            return result
         except PyMongoError as e:
             raise CustomGraphQLExceptionHelper(
                 f"Error al buscar documentos: {e}",
@@ -164,11 +168,11 @@ class MongoHelper:
     async def update_one(
         self,
         collection_name: str,
-        filter_: Dict[str, Any],
-        update: Dict[str, Any],
+        filter_: dict[str, Any],
+        update: dict[str, Any],
         upsert: bool = False,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         collection = self.get_collection(collection_name)
 
         # Aseguramos que siempre se actualice updated_at
@@ -177,7 +181,7 @@ class MongoHelper:
 
         try:
             # Usamos find_one_and_update para devolver el documento actualizado
-            updated_doc = await collection.find_one_and_update(
+            updated_doc: Dict[str, Any] = await collection.find_one_and_update(
                 filter_,
                 update,
                 upsert=upsert,
@@ -193,7 +197,7 @@ class MongoHelper:
                     details={"collection": collection_name},
                 )
 
-            return updated_doc  # devuelvo el documento actualizado como dict
+            return updated_doc
 
         except DuplicateKeyError:
             message = DUPLICATE_ERROR_MESSAGES.get(collection_name, DEFAULT_DUPLICATE_MESSAGE)
@@ -212,9 +216,9 @@ class MongoHelper:
     async def delete_one(
         self,
         collection_name: str,
-        filter_: Dict[str, Any],
-        **kwargs,
-    ):
+        filter_: dict[str, Any],
+        **kwargs: Any,
+    ) -> DeleteResult:
         collection = self.get_collection(collection_name)
 
         try:
@@ -225,6 +229,22 @@ class MongoHelper:
                 HTTPErrorCode.BAD_REQUEST,
             )
 
+    async def delete_many(
+        self,
+        collection_name: str,
+        filter_: dict[str, Any],
+        **kwargs: Any,
+    ) -> DeleteResult:
+        collection = self.get_collection(collection_name)
+
+        try:
+            return await collection.delete_many(filter_, **kwargs)
+        except PyMongoError as e:
+            raise CustomGraphQLExceptionHelper(
+                f"Error al eliminar documentos: {e}",
+                HTTPErrorCode.BAD_REQUEST,
+            )
+
     # --------------------------------------------------
     # Aggregation
     # --------------------------------------------------
@@ -232,10 +252,10 @@ class MongoHelper:
     async def aggregate(
         self,
         collection_name: str,
-        pipeline: List[Dict[str, Any]],
+        pipeline: list[dict[str, Any]],
         allow_disk_use: bool = False,
-        **kwargs,
-    ) -> List[Dict[str, Any]]:
+        **kwargs: Any,
+    ) -> list[dict[str, Any]]:
         """
         Ejecuta un aggregation pipeline y devuelve la lista de documentos.
         """

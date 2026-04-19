@@ -1,19 +1,24 @@
 import importlib
 from pathlib import Path
-from typing import Callable, List, Tuple
+from typing import Any, Awaitable, Callable
+
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from server.helpers.logger_helper import LoggerHelper
 
 MIGRATIONS_PACKAGE = Path(__file__).resolve().parent
 
 
-def _find_migration_modules() -> List[str]:
+def _find_migration_modules() -> list[str]:
     files = sorted(MIGRATIONS_PACKAGE.glob("*.py"))
     return [f.stem for f in files if f.stem != "__init__"]
 
 
-def _load_migrations() -> List[Tuple[str, str, Callable]]:
-    migrations = []
+MigrationCallable = Callable[[AsyncIOMotorDatabase[dict[str, Any]]], Awaitable[None]]
+
+
+def _load_migrations() -> list[tuple[str, str, MigrationCallable]]:
+    migrations: list[tuple[str, str, MigrationCallable]] = []
     for module_name in _find_migration_modules():
         module = importlib.import_module(f"server.db.migrations.{module_name}")
 
@@ -29,7 +34,7 @@ def _load_migrations() -> List[Tuple[str, str, Callable]]:
     return migrations
 
 
-async def run_migrations(db):
+async def run_migrations(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
     from datetime import datetime
 
     migrations_collection = db["migrations"]

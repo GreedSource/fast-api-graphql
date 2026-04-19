@@ -1,4 +1,7 @@
+# ruff: noqa: ANN401
+
 import logging
+from typing import Any
 
 
 class LoggerHelper:
@@ -16,17 +19,13 @@ class LoggerHelper:
     logging.addLevelName(SUCCESS_LEVEL, "SUCCESS")
 
     @staticmethod
-    def _add_success_method():
-        def success(self, message, *args, **kwargs):
-            if self.isEnabledFor(LoggerHelper.SUCCESS_LEVEL):
-                self._log(LoggerHelper.SUCCESS_LEVEL, message, args, **kwargs)
+    def _add_success_method() -> None:
+        return None
 
-        logging.Logger.success = success
-
-    _logger = None  # instancia única
+    _logger: logging.Logger | None = None  # instancia única
 
     @staticmethod
-    def _get_logger():
+    def _get_logger() -> logging.Logger:
         if LoggerHelper._logger is None:
             logger = logging.getLogger("LoggerHelper")
             logger.setLevel(logging.DEBUG)
@@ -44,32 +43,31 @@ class LoggerHelper:
         return LoggerHelper._logger
 
     class ColoredFormatter(logging.Formatter):
-        def format(self, record):
+        def format(self, record: logging.LogRecord) -> str:
             levelname = record.levelname
             color = LoggerHelper.COLORS.get(levelname, LoggerHelper.RESET)
             message = super().format(record)
             return f"{color}{message}{LoggerHelper.RESET}"
 
     @staticmethod
-    def debug(msg: str, *args, **kwargs):
+    def debug(msg: str, *args: object, **kwargs: Any) -> None:
         LoggerHelper._get_logger().debug(msg, *args, **kwargs)
 
     @staticmethod
-    def info(msg: str, *args, **kwargs):
+    def info(msg: str, *args: object, **kwargs: Any) -> None:
         LoggerHelper._get_logger().info(msg, *args, **kwargs)
 
     @staticmethod
-    def warning(msg: str, *args, **kwargs):
+    def warning(msg: str, *args: object, **kwargs: Any) -> None:
         LoggerHelper._get_logger().warning(msg, *args, **kwargs)
 
     @staticmethod
-    def error(msg: str, *args, **kwargs):
+    def error(msg: str, *args: object, **kwargs: Any) -> None:
         LoggerHelper._get_logger().error(msg, *args, **kwargs)
 
     @staticmethod
-    def success(msg: str, *args, **kwargs):
-        LoggerHelper._get_logger().success(msg, *args, **kwargs)
+    def success(msg: str, *args: object, **kwargs: Any) -> None:
+        LoggerHelper._get_logger().log(LoggerHelper.SUCCESS_LEVEL, msg, *args, **kwargs)
 
 
-# Registrar método success en logging.Logger
 LoggerHelper._add_success_method()

@@ -1,8 +1,15 @@
+from typing import Any
+
 from server.enums.http_error_code_enum import HTTPErrorCode
 
 
 class CustomGraphQLExceptionHelper(Exception):
-    def __init__(self, message, code=HTTPErrorCode.BAD_REQUEST, details=None):
+    def __init__(
+        self,
+        message: str,
+        code: HTTPErrorCode = HTTPErrorCode.BAD_REQUEST,
+        details: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(message)
         self.message = message
         if isinstance(code, HTTPErrorCode):
@@ -14,7 +21,7 @@ class CustomGraphQLExceptionHelper(Exception):
             self.status_code = 400
         self.details = details or {}
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return {
             "message": self.message,
             "extensions": {

@@ -75,4 +75,4 @@ USER app
 EXPOSE 8000
 
 # ⚠️ seed opcional
-CMD ["sh", "-c", "python manage.py migrate && if [ \"$RUN_SEEDERS\" = \"true\" ]; then python manage.py seed-all; fi && uvicorn app:app --host 0.0.0.0 --port 8000 --ws websockets --proxy-headers"]
+CMD ["sh", "-c", "python manage.py migrate && if [ \"$RUN_SEEDERS\" = \"true\" ]; then python manage.py seed-all; fi && uvicorn app:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-4} --ws websockets --proxy-headers"]

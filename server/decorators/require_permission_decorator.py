@@ -1,34 +1,31 @@
 from enum import Enum
 from functools import wraps
-from typing import List, Union
+from typing import Awaitable, Callable, Dict, List, ParamSpec, TypeVar, Union
+
+from graphql import GraphQLResolveInfo
 
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 
+P = ParamSpec("P")
+T = TypeVar("T")
+
 
 class PermissionCheckMode(str, Enum):
-    """Modos de verificación de permisos"""
-
-    ANY = "any"  # Basta con tener uno de los permisos
-    ALL = "all"  # Debe tener todos los permisos
+    ANY = "any"
+    ALL = "all"
 
 
-def require_permission(type: str, action: str):
-    """
-    Decorator que verifica que el usuario tenga un permiso específico {type, action}.
-
-    Requiere que @require_token se ejecute primero para inyectar current_user en el contexto.
-
-    Ejemplo:
-        @require_token
-        @require_permission(type="users", action="create")
-        async def resolve_create_role(self, parent, info, input):
-            ...
-    """
-
-    def decorator(resolver):
+def require_permission(
+    type: str,
+    action: str,
+) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T]]]:
+    def decorator(resolver: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
         @wraps(resolver)
-        async def wrapper(self, parent, info, *args, **kwargs):
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            info = args[2]
+            assert isinstance(info, GraphQLResolveInfo)
+
             current_user = info.context.get("current_user")
 
             if not current_user:
@@ -36,6 +33,7 @@ def require_permission(type: str, action: str):
                     "Usuario no autenticado",
                     HTTPErrorCode.UNAUTHORIZED,
                 )
+
             role = current_user.get("role")
             if not role:
                 raise CustomGraphQLExceptionHelper(
@@ -53,7 +51,7 @@ def require_permission(type: str, action: str):
                     HTTPErrorCode.FORBIDDEN,
                 )
 
-            return await resolver(self, parent, info, *args, **kwargs)
+            return await resolver(*args, **kwargs)
 
         return wrapper
 
@@ -61,35 +59,18 @@ def require_permission(type: str, action: str):
 
 
 def require_permissions(
-    permissions: List[dict],
+    permissions: List[Dict[str, str]],
     mode: Union[PermissionCheckMode, str] = PermissionCheckMode.ANY,
-):
-    """
-    Decorator que verifica múltiples permisos.
-
-    Args:
-        permissions: Lista de dicts con {type, action}
-        mode: PermissionCheckMode.ANY (basta uno) o PermissionCheckMode.ALL (todos)
-
-    Ejemplo:
-        @require_token
-        @require_permissions(
-            permissions=[
-                {"type": "users", "action": "create"},
-                {"type": "users", "action": "update"},
-            ],
-            mode=PermissionCheckMode.ALL
-        )
-        async def resolve_manage_users(self, parent, info, input):
-            ...
-    """
-
+) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T]]]:
     if isinstance(mode, str):
         mode = PermissionCheckMode(mode)
 
-    def decorator(resolver):
+    def decorator(resolver: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
         @wraps(resolver)
-        async def wrapper(self, parent, info, *args, **kwargs):
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            info = args[2]
+            assert isinstance(info, GraphQLResolveInfo)
+
             current_user = info.context.get("current_user")
 
             if not current_user:
@@ -112,10 +93,10 @@ def require_permissions(
 
             if mode == PermissionCheckMode.ANY:
                 has_permission = bool(required_perm_set & user_perm_set)
-                perm_description = " o ".join([f"{p['type']}:{p['action']}" for p in permissions])
-            else:  # ALL
+                perm_description = " o ".join(f"{p['type']}:{p['action']}" for p in permissions)
+            else:
                 has_permission = required_perm_set.issubset(user_perm_set)
-                perm_description = " y ".join([f"{p['type']}:{p['action']}" for p in permissions])
+                perm_description = " y ".join(f"{p['type']}:{p['action']}" for p in permissions)
 
             if not has_permission:
                 raise CustomGraphQLExceptionHelper(
@@ -123,7 +104,7 @@ def require_permissions(
                     HTTPErrorCode.FORBIDDEN,
                 )
 
-            return await resolver(self, parent, info, *args, **kwargs)
+            return await resolver(*args, **kwargs)
 
         return wrapper
 

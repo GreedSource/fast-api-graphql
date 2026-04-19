@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from ariadne import MutationType, QueryType
 from graphql import GraphQLResolveInfo
 
@@ -7,12 +9,12 @@ from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 from server.helpers.logger_helper import LoggerHelper
 from server.models.response_model import ResponseModel
-from server.models.user_model import RegisterModel, ResetPasswordModel
+from server.models.user_model import RegisterModel, ResetPasswordModel, UserItemModel
 from server.services.auth_service import AuthService
 
 
 class AuthResolver:
-    def __init__(self):
+    def __init__(self) -> None:
         self.query = QueryType()
         self.mutation = MutationType()
 
@@ -27,10 +29,10 @@ class AuthResolver:
     # Bindings
     # -----------------
 
-    def _bind_queries(self):
+    def _bind_queries(self) -> None:
         self.query.set_field("profile", self.resolve_profile)
 
-    def _bind_mutations(self):
+    def _bind_mutations(self) -> None:
         self.mutation.set_field("register", self.resolve_register)
         self.mutation.set_field("login", self.resolve_login)
         self.mutation.set_field("refreshToken", self.resolve_refresh_token)
@@ -42,7 +44,9 @@ class AuthResolver:
     # Mutations
     # -----------------
 
-    async def resolve_register(self, _, info: GraphQLResolveInfo, input):
+    async def resolve_register(
+        self, _: object, info: GraphQLResolveInfo, input: Dict[str, Any]
+    ) -> ResponseModel[Dict[str, Any]]:
         model = RegisterModel(**input)
 
         user = await self.auth_service.register(user_data=model.model_dump())
@@ -54,7 +58,9 @@ class AuthResolver:
         )
 
     # En tu AuthResolver
-    async def resolve_login(self, _, info: GraphQLResolveInfo, input):
+    async def resolve_login(
+        self, _: object, info: GraphQLResolveInfo, input: Dict[str, Any]
+    ) -> ResponseModel[Dict[str, Any]]:
         response = info.context["response"]
 
         payload = await self.auth_service.login(email=input["email"], password=input["password"])
@@ -83,7 +89,9 @@ class AuthResolver:
             data=payload,
         )
 
-    async def resolve_refresh_token(self, _, info: GraphQLResolveInfo, refreshToken=None):
+    async def resolve_refresh_token(
+        self, _: object, info: GraphQLResolveInfo, refreshToken: str | None = None
+    ) -> ResponseModel[Dict[str, Any]]:
         request = info.context["request"]
         response = info.context["response"]
 
@@ -118,7 +126,7 @@ class AuthResolver:
             data=result,
         )
 
-    async def resolve_recover_password(self, _, info: GraphQLResolveInfo, email):
+    async def resolve_recover_password(self, _: object, info: GraphQLResolveInfo, email: str) -> ResponseModel[bool]:
         background_tasks = info.context["background_tasks"]
         result = await self.auth_service.recover_password(
             email=email,
@@ -131,7 +139,9 @@ class AuthResolver:
             data=result,
         )
 
-    async def resolve_reset_password(self, _, info: GraphQLResolveInfo, input):
+    async def resolve_reset_password(
+        self, _: object, info: GraphQLResolveInfo, input: Dict[str, Any]
+    ) -> ResponseModel[bool]:
         model = ResetPasswordModel(**input)
 
         result = await self.auth_service.reset_password(
@@ -145,7 +155,7 @@ class AuthResolver:
             data=result,
         )
 
-    async def resolve_logout(self, _, info: GraphQLResolveInfo):
+    async def resolve_logout(self, _: object, info: GraphQLResolveInfo) -> ResponseModel[bool]:
         response = info.context["response"]
 
         await self.auth_service.logout()
@@ -174,12 +184,12 @@ class AuthResolver:
     # -----------------
 
     @require_token
-    async def resolve_profile(self, _, info: GraphQLResolveInfo):
+    async def resolve_profile(self, _: object, info: GraphQLResolveInfo) -> ResponseModel[UserItemModel]:
         return ResponseModel(
             status=200,
             message="Profile retrieved",
             data=info.context["current_user"],
         )
 
-    def get_resolvers(self):
+    def get_resolvers(self) -> list[QueryType | MutationType]:
         return [self.query, self.mutation]

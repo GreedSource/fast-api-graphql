@@ -1,14 +1,17 @@
+from typing import Any, Dict
+
 from ariadne import MutationType, QueryType
+from graphql import GraphQLResolveInfo
 
 from server.decorators.require_permission_decorator import require_permission
 from server.decorators.require_token_decorator import require_token
-from server.models.action_model import CreateActionModel
+from server.models.action_model import ActionItemModel, ActionListModel, CreateActionModel
 from server.models.response_model import ResponseModel
 from server.services.action_service import ActionService
 
 
 class ActionResolver:
-    def __init__(self):
+    def __init__(self) -> None:
         self.query = QueryType()
         self.mutation = MutationType()
         self.__service = ActionService()
@@ -18,16 +21,18 @@ class ActionResolver:
 
     @require_token
     @require_permission(type="actions", action="read")
-    async def resolve_actions(self, *_):
+    async def resolve_actions(self, _: object, info: GraphQLResolveInfo) -> ResponseModel[ActionListModel]:
         data = await self.__service.get_all()
         return ResponseModel(status=200, message="Actions fetched", data=data)
 
     @require_token
     @require_permission(type="actions", action="create")
-    async def resolve_create(self, _, __, input):
+    async def resolve_create(
+        self, _: object, info: GraphQLResolveInfo, input: Dict[str, Any]
+    ) -> ResponseModel[ActionItemModel]:
         model = CreateActionModel(**input)
         data = await self.__service.create(model)
         return ResponseModel(status=200, message="Action created", data=data)
 
-    def get_resolvers(self):
+    def get_resolvers(self) -> list[QueryType | MutationType]:
         return [self.query, self.mutation]

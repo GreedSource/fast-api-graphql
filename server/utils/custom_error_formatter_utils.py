@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from graphql import GraphQLError
 from pydantic import ValidationError
 
@@ -5,7 +7,7 @@ from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptio
 from server.helpers.logger_helper import LoggerHelper
 
 
-def custom_format_error(error: GraphQLError, debug: bool = False):
+def custom_format_error(error: GraphQLError, debug: bool = False) -> Dict[str, Any]:
     original = error.original_error
 
     # 🔥 LOG CRUDO (esto es lo que quieres ver)
