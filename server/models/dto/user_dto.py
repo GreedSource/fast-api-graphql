@@ -1,19 +1,11 @@
 import re
+import uuid
 from typing import List, Optional
 
-from gridfs.grid_file import ObjectId
-from pydantic import (
-    BaseModel,
-    EmailStr,
-    Field,
-    RootModel,
-    ValidationInfo,
-    field_validator,
-    model_validator,
-)
+from pydantic import BaseModel, EmailStr, Field, RootModel, field_validator, model_validator
 
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
-from server.models.role_model import RoleItemModel
+from server.models.dto.role_dto import RoleItemModel
 from server.utils.auth_utils import hash_password
 
 
@@ -27,7 +19,9 @@ class RegisterModel(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def trim_all_str_fields(cls, values: dict) -> dict:
-        return {k: v.strip() if isinstance(v, str) else v for k, v in values.items()}
+        if isinstance(values, dict):
+            return {k: v.strip() if isinstance(v, str) else v for k, v in values.items()}
+        return values
 
     @model_validator(mode="after")
     def check_password_match(self):
@@ -39,7 +33,6 @@ class RegisterModel(BaseModel):
 
     @field_validator("password", "confirm_password")
     def strong_password(cls, v):
-        # Al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo
         pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
         if not re.match(pattern, v):
             raise CustomGraphQLExceptionHelper(
@@ -48,9 +41,7 @@ class RegisterModel(BaseModel):
             )
         return v
 
-    model_config = {
-        "populate_by_name": True  # permite pasar 'id' o '_id' al instanciar
-    }
+    model_config = {"populate_by_name": True}
 
 
 class ResetPasswordModel(BaseModel):
@@ -61,7 +52,9 @@ class ResetPasswordModel(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def trim_all_str_fields(cls, values: dict) -> dict:
-        return {k: v.strip() if isinstance(v, str) else v for k, v in values.items()}
+        if isinstance(values, dict):
+            return {k: v.strip() if isinstance(v, str) else v for k, v in values.items()}
+        return values
 
     @model_validator(mode="after")
     def check_password_match(self):
@@ -73,7 +66,6 @@ class ResetPasswordModel(BaseModel):
 
     @field_validator("password", "confirm_password")
     def strong_password(cls, v):
-        # Al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo
         pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
         if not re.match(pattern, v):
             raise CustomGraphQLExceptionHelper(
@@ -82,49 +74,52 @@ class ResetPasswordModel(BaseModel):
             )
         return v
 
-    model_config = {
-        "populate_by_name": True  # permite pasar 'id' o '_id' al instanciar
-    }
+    model_config = {"populate_by_name": True}
 
 
 class UpdateUserModel(BaseModel):
     name: Optional[str] = Field(None, description="User name", min_length=3)
     lastname: Optional[str] = Field(None, description="User lastname", min_length=3)
     email: Optional[EmailStr] = Field(None, description="User email")
-    role_id: Optional[str] = Field(None, alias="roleId", description="User role ID")
+    role_id: Optional[uuid.UUID] = Field(None, alias="roleId", description="User role ID")
 
-    @field_validator("role_id")
+    @field_validator("role_id", mode="before")
     @classmethod
     def validate_role_id(cls, value):
         if value is None:
             return value
-        if not ObjectId.is_valid(value):
-            raise CustomGraphQLExceptionHelper("roleId not valid.")
-        return value
+        if isinstance(value, uuid.UUID):
+            return value
+        try:
+            return uuid.UUID(str(value))
+        except (ValueError, TypeError):
+            raise CustomGraphQLExceptionHelper("roleId is not a valid UUID.")
 
-    model_config = {
-        "populate_by_name": True  # permite pasar 'id' o '_id' al instanciar
-    }
+    model_config = {"populate_by_name": True}
 
 
 class UserItemModel(BaseModel):
-    id: str = Field(..., alias="_id", description="User ID")
+    id: uuid.UUID = Field(..., description="User ID")
     name: str = Field(..., description="User name")
     lastname: str = Field(..., description="User lastname")
     email: EmailStr = Field(..., description="User email")
     role: Optional[RoleItemModel] = Field(None, description="User role")
 
     @field_validator("id", mode="before")
-    def validate_id(cls, v, info: ValidationInfo):
-        if not ObjectId.is_valid(v):
-            raise CustomGraphQLExceptionHelper(f"{info.field_name} not valid.")
-        return str(v)
+    @classmethod
+    def validate_id(cls, v):
+        if isinstance(v, uuid.UUID):
+            return v
+        try:
+            return uuid.UUID(str(v))
+        except (ValueError, TypeError):
+            raise CustomGraphQLExceptionHelper("User ID is not a valid UUID.")
 
     model_config = {
-        "populate_by_name": True  # permite pasar 'id' o '_id' al instanciar
+        "populate_by_name": True,
+        "from_attributes": True,
     }
 
 
-# Crear un modelo que sea una lista de UserItemModel
 class UserListModel(RootModel):
-    root: List[UserItemModel]  # <--- lista de usuarios
+    root: List[UserItemModel]

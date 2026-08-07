@@ -11,5 +11,6 @@ class ResponseModel(BaseModel, Generic[T]):
     data: Optional[T] = Field(None, description="Payload of the response")
 
     model_config = {
-        "populate_by_name": True,  # útil si usas alias en los modelos
+        "populate_by_name": True,
+        "from_attributes": True,
     }
