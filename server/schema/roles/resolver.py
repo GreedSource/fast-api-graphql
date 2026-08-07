@@ -4,8 +4,8 @@ from graphql import GraphQLResolveInfo
 from server.decorators.require_permission_decorator import require_permission
 from server.decorators.require_token_decorator import require_token
 from server.helpers.logger_helper import LoggerHelper
-from server.models.response_model import ResponseModel
-from server.models.role_model import (
+from server.models.dto.response_dto import ResponseModel
+from server.models.dto.role_dto import (
     CreateRoleModel,
     RoleItemModel,
     UpdateRoleModel,
@@ -80,7 +80,7 @@ class RoleResolver:
 
     @require_token
     @require_permission(type="roles", action="update")
-    async def resolve_add_permissions(self, _, __, info: GraphQLResolveInfo, roleId: str, permissionIds: list[str]):
+    async def resolve_add_permissions(self, _, info: GraphQLResolveInfo, roleId: str, permissionIds: list[str]):
         await self.__service.add_permissions(roleId, permissionIds)
         return ResponseModel[bool](
             status=200,
@@ -90,7 +90,7 @@ class RoleResolver:
 
     @require_token
     @require_permission(type="roles", action="update")
-    async def resolve_remove_permissions(self, _, __, info: GraphQLResolveInfo, roleId: str, permissionIds: list[str]):
+    async def resolve_remove_permissions(self, _, info: GraphQLResolveInfo, roleId: str, permissionIds: list[str]):
         await self.__service.remove_permissions(roleId, permissionIds)
         return ResponseModel[bool](
             status=200,

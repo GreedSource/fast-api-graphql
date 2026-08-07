@@ -2,8 +2,8 @@ from ariadne import MutationType, QueryType
 
 from server.decorators.require_permission_decorator import require_permission
 from server.decorators.require_token_decorator import require_token
-from server.models.permission_model import CreatePermissionModel
-from server.models.response_model import ResponseModel
+from server.models.dto.permission_dto import CreatePermissionModel
+from server.models.dto.response_dto import ResponseModel
 from server.services.permission_service import PermissionService
 
 

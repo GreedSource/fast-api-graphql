@@ -1,5 +1,3 @@
-# server/services/auth_service.py
-
 from server.config.settings import settings
 from server.decorators.singleton_decorator import singleton
 from server.helpers.custom_graphql_exception_helper import (
@@ -8,7 +6,7 @@ from server.helpers.custom_graphql_exception_helper import (
 from server.helpers.logger_helper import LoggerHelper
 from server.helpers.mail_helper import MailHelper
 from server.helpers.template_helper import TemplateHelper
-from server.models.user_model import UserItemModel
+from server.models.dto.user_dto import UserItemModel
 from server.repositories.user_repository import UserRepository
 from server.utils.auth_utils import (
     create_refresh_token,
@@ -23,38 +21,32 @@ from server.utils.auth_utils import (
 class AuthService:
     def __init__(self):
         self.__repository = UserRepository()
-
         self.__mail_helper = MailHelper()
         self.__template_helper = TemplateHelper()
         LoggerHelper.info("AuthService initialized")
 
-    # -----------------
-    # Actions
-    # -----------------
-
     async def register(self, user_data: dict):
-        inserted_id = await self.__repository.create(user_data)
-        user_data["_id"] = inserted_id
-        user = UserItemModel(**user_data).model_dump()
-        access_token = create_token(user)
-        refresh_token = create_refresh_token(user)
+        user_orm = await self.__repository.create(user_data)
+        user_dto = UserItemModel.model_validate(user_orm).model_dump(mode="json")
+        access_token = create_token(user_dto)
+        refresh_token = create_refresh_token(user_dto)
         return {
-            "user": user,
+            "user": user_dto,
             "accessToken": access_token,
             "refreshToken": refresh_token,
         }
 
     async def login(self, email: str, password: str):
-        user = await self.__repository.find_by_email(email)
+        user_orm = await self.__repository.find_by_email(email)
 
-        if not user or not verify_password(password, user["password"]):
+        if not user_orm or not verify_password(password, user_orm.password):
             raise CustomGraphQLExceptionHelper("Credenciales inválidas")
 
-        user = UserItemModel(**user).model_dump()
-        access_token = create_token(user)
-        refresh_token = create_refresh_token(user)
+        user_dto = UserItemModel.model_validate(user_orm).model_dump(mode="json")
+        access_token = create_token(user_dto)
+        refresh_token = create_refresh_token(user_dto)
         return {
-            "user": user,
+            "user": user_dto,
             "accessToken": access_token,
             "refreshToken": refresh_token,
         }
@@ -62,14 +54,14 @@ class AuthService:
     async def refresh_token(self, refresh_token: str):
         payload = verify_refresh_token(refresh_token)
 
-        user = await self.__repository.find_by_id(payload.get("id"))
-        if not user:
+        user_orm = await self.__repository.find_by_id(payload.get("id"))
+        if not user_orm:
             raise CustomGraphQLExceptionHelper("Usuario no encontrado")
-        user = UserItemModel(**user).model_dump()
-        access_token = create_token(user)
+        user_dto = UserItemModel.model_validate(user_orm).model_dump(mode="json")
+        access_token = create_token(user_dto)
 
         return {
-            "user": user,
+            "user": user_dto,
             "accessToken": access_token,
             "refreshToken": refresh_token,
         }
@@ -78,8 +70,8 @@ class AuthService:
         return True
 
     async def recover_password(self, email: str, background_tasks):
-        user = await self.__repository.find_by_email(email)
-        if not user:
+        user_orm = await self.__repository.find_by_email(email)
+        if not user_orm:
             LoggerHelper.warning(f"Password recovery attempted for non-existent email: {email}")
             return True
 
@@ -92,7 +84,7 @@ class AuthService:
             "emails/reset_password.html",
             {
                 "reset_url": reset_url,
-                "user": user,  # opcional
+                "user": user_orm,
             },
         )
 
@@ -113,12 +105,12 @@ class AuthService:
             if not email:
                 raise CustomGraphQLExceptionHelper("Token inválido")
 
-            user = await self.__repository.find_by_email(email)
-            if not user:
+            user_orm = await self.__repository.find_by_email(email)
+            if not user_orm:
                 raise CustomGraphQLExceptionHelper("Usuario no encontrado")
 
             await self.__repository.update(
-                str(user["_id"]),
+                str(user_orm.id),
                 {"password": new_password},
             )
 

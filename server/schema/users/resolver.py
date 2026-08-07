@@ -7,8 +7,8 @@ from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 from server.helpers.logger_helper import LoggerHelper
 from server.helpers.redis_helper import RedisHelper
-from server.models.response_model import ResponseModel
-from server.models.user_model import UpdateUserModel
+from server.models.dto.response_dto import ResponseModel
+from server.models.dto.user_dto import UpdateUserModel
 from server.services.user_service import UserService
 
 

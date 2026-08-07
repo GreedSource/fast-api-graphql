@@ -1,173 +1,193 @@
-# server/repositories/role_repository.py
-from bson import ObjectId
+import uuid
+from typing import List, Optional
 
-from server.db.mongo import get_mongo_db
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from server.db.session import AsyncSessionLocal
 from server.decorators.singleton_decorator import singleton
-from server.helpers.logger_helper import LoggerHelper
-from server.helpers.mongo_helper import MongoHelper
+from server.models.orm.permission_orm import PermissionORM
+from server.models.orm.role_orm import RoleORM
 
 
 @singleton
 class RoleRepository:
-    def __init__(self):
-        self.__mongo = MongoHelper(
-            db=get_mongo_db(),
-            allowed_collections={"roles"},
+    async def create(self, role_data: dict, session: Optional[AsyncSession] = None) -> RoleORM:
+        role = RoleORM(**role_data)
+        if session:
+            session.add(role)
+            await session.commit()
+            await session.refresh(role)
+            return role
+        async with AsyncSessionLocal() as db_session:
+            db_session.add(role)
+            await db_session.commit()
+            await db_session.refresh(role)
+            return role
+
+    async def find_by_id(self, role_id: str | uuid.UUID, session: Optional[AsyncSession] = None) -> Optional[RoleORM]:
+        r_uuid = uuid.UUID(str(role_id)) if isinstance(role_id, str) else role_id
+        stmt = (
+            select(RoleORM)
+            .options(
+                selectinload(RoleORM.permissions).selectinload(PermissionORM.module),
+                selectinload(RoleORM.permissions).selectinload(PermissionORM.action),
+            )
+            .where(RoleORM.id == r_uuid)
         )
-        LoggerHelper.info("RoleRepository initialized")
+        if session:
+            res = await session.execute(stmt)
+            return res.scalar_one_or_none()
+        async with AsyncSessionLocal() as db_session:
+            res = await db_session.execute(stmt)
+            return res.scalar_one_or_none()
 
-    async def create(self, role_data: dict):
-        return await self.__mongo.insert_one("roles", role_data)
-
-    def _build_role_pipeline(self, role_id: str | None = None):
-        pipeline = []
-
-        if role_id:
-            pipeline.append({"$match": {"_id": ObjectId(role_id)}})
-
-        pipeline.extend(
-            [
-                {
-                    "$lookup": {
-                        "from": "permissions",
-                        "localField": "permissions",
-                        "foreignField": "_id",
-                        "as": "permissions_docs",
-                    }
-                },
-                {
-                    "$lookup": {
-                        "from": "modules",
-                        "localField": "permissions_docs.module_id",
-                        "foreignField": "_id",
-                        "as": "modules",
-                    }
-                },
-                {
-                    "$lookup": {
-                        "from": "actions",
-                        "localField": "permissions_docs.action_id",
-                        "foreignField": "_id",
-                        "as": "actions",
-                    }
-                },
-                {
-                    "$addFields": {
-                        "permissions": {
-                            "$map": {
-                                "input": {"$ifNull": ["$permissions_docs", []]},
-                                "as": "perm",
-                                "in": {
-                                    "action": {
-                                        "$arrayElemAt": [
-                                            {
-                                                "$map": {
-                                                    "input": {
-                                                        "$filter": {
-                                                            "input": "$actions",
-                                                            "as": "action",
-                                                            "cond": {
-                                                                "$eq": [
-                                                                    "$$action._id",
-                                                                    "$$perm.action_id",
-                                                                ]
-                                                            },
-                                                        }
-                                                    },
-                                                    "as": "matched_action",
-                                                    "in": "$$matched_action.key",
-                                                }
-                                            },
-                                            0,
-                                        ]
-                                    },
-                                    "type": {
-                                        "$arrayElemAt": [
-                                            {
-                                                "$map": {
-                                                    "input": {
-                                                        "$filter": {
-                                                            "input": "$modules",
-                                                            "as": "module",
-                                                            "cond": {
-                                                                "$eq": [
-                                                                    "$$module._id",
-                                                                    "$$perm.module_id",
-                                                                ]
-                                                            },
-                                                        }
-                                                    },
-                                                    "as": "matched_module",
-                                                    "in": "$$matched_module.key",
-                                                }
-                                            },
-                                            0,
-                                        ]
-                                    },
-                                },
-                            }
-                        }
-                    }
-                },
-                {
-                    "$project": {
-                        "_id": 1,
-                        "name": 1,
-                        "description": 1,
-                        "active": 1,
-                        "permissions": 1,
-                    }
-                },
-            ]
+    async def find_by_name(self, name: str, session: Optional[AsyncSession] = None) -> Optional[RoleORM]:
+        stmt = (
+            select(RoleORM)
+            .options(
+                selectinload(RoleORM.permissions).selectinload(PermissionORM.module),
+                selectinload(RoleORM.permissions).selectinload(PermissionORM.action),
+            )
+            .where(RoleORM.name == name.strip())
         )
+        if session:
+            res = await session.execute(stmt)
+            return res.scalar_one_or_none()
+        async with AsyncSessionLocal() as db_session:
+            res = await db_session.execute(stmt)
+            return res.scalar_one_or_none()
 
-        return pipeline
-
-    async def find_by_id(self, role_id: str):
-        roles = await self.__mongo.aggregate("roles", self._build_role_pipeline(role_id))
-        return roles[0] if roles else None
-
-    async def find_by_name(self, name: str):
-        return await self.__mongo.find_one("roles", {"name": name})
-
-    async def find_all(self):
-        return await self.__mongo.aggregate("roles", self._build_role_pipeline())
-
-    async def update(self, role_id: str, update_data: dict):
-        return await self.__mongo.update_one(
-            "roles",
-            {"_id": ObjectId(role_id)},
-            {"$set": update_data},
+    async def find_all(self, session: Optional[AsyncSession] = None) -> List[RoleORM]:
+        stmt = (
+            select(RoleORM)
+            .options(
+                selectinload(RoleORM.permissions).selectinload(PermissionORM.module),
+                selectinload(RoleORM.permissions).selectinload(PermissionORM.action),
+            )
+            .order_by(RoleORM.name)
         )
+        if session:
+            res = await session.execute(stmt)
+            return list(res.scalars().all())
+        async with AsyncSessionLocal() as db_session:
+            res = await db_session.execute(stmt)
+            return list(res.scalars().all())
+
+    async def update(
+        self, role_id: str | uuid.UUID, update_data: dict, session: Optional[AsyncSession] = None
+    ) -> Optional[RoleORM]:
+        role = await self.find_by_id(role_id, session=session)
+        if not role:
+            return None
+        for key, val in update_data.items():
+            if hasattr(role, key) and val is not None:
+                setattr(role, key, val)
+        if session:
+            await session.commit()
+            await session.refresh(role)
+            return role
+        async with AsyncSessionLocal() as db_session:
+            db_session.add(role)
+            await db_session.commit()
+            await db_session.refresh(role)
+            return role
+
+    async def assign_permissions(
+        self,
+        role_id: str | uuid.UUID,
+        permission_ids: list[str | uuid.UUID],
+        session: Optional[AsyncSession] = None,
+    ) -> Optional[RoleORM]:
+        r_uuid = uuid.UUID(str(role_id)) if isinstance(role_id, str) else role_id
+        p_uuids = [uuid.UUID(str(pid)) if isinstance(pid, str) else pid for pid in permission_ids]
+
+        async def _assign(s: AsyncSession):
+            stmt_role = select(RoleORM).options(selectinload(RoleORM.permissions)).where(RoleORM.id == r_uuid)
+            res_role = await s.execute(stmt_role)
+            role = res_role.scalar_one_or_none()
+            if not role:
+                return None
+
+            stmt_perms = select(PermissionORM).where(PermissionORM.id.in_(p_uuids))
+            res_perms = await s.execute(stmt_perms)
+            perms = list(res_perms.scalars().all())
+
+            role.permissions = perms
+            await s.commit()
+            await s.refresh(role)
+            return role
+
+        if session:
+            return await _assign(session)
+        async with AsyncSessionLocal() as db_session:
+            return await _assign(db_session)
 
     async def add_permissions(
         self,
-        role_id: str,
-        permission_ids: list[str],
-    ):
-        object_ids = [ObjectId(pid) for pid in permission_ids]
-
-        return await self.__mongo.update_one(
-            "roles",
-            {"_id": ObjectId(role_id)},
-            {"$addToSet": {"permissions": {"$each": object_ids}}},
-        )
+        role_id: str | uuid.UUID,
+        permission_ids: list[str | uuid.UUID],
+        session: Optional[AsyncSession] = None,
+    ) -> Optional[RoleORM]:
+        return await self._update_permissions(role_id, permission_ids, mode="add", session=session)
 
     async def remove_permissions(
         self,
-        role_id: str,
-        permission_ids: list[str],
-    ):
-        object_ids = [ObjectId(pid) for pid in permission_ids]
+        role_id: str | uuid.UUID,
+        permission_ids: list[str | uuid.UUID],
+        session: Optional[AsyncSession] = None,
+    ) -> Optional[RoleORM]:
+        return await self._update_permissions(role_id, permission_ids, mode="remove", session=session)
 
-        return await self.__mongo.update_one(
-            "roles",
-            {"_id": ObjectId(role_id)},
-            {"$pull": {"permissions": {"$in": object_ids}}},
-        )
+    async def _update_permissions(
+        self,
+        role_id: str | uuid.UUID,
+        permission_ids: list[str | uuid.UUID],
+        mode: str,
+        session: Optional[AsyncSession] = None,
+    ) -> Optional[RoleORM]:
+        r_uuid = uuid.UUID(str(role_id)) if isinstance(role_id, str) else role_id
+        p_uuids = {uuid.UUID(str(pid)) if isinstance(pid, str) else pid for pid in permission_ids}
 
-    async def delete(self, role_id: str):
-        return await self.__mongo.delete_one(
-            "roles",
-            {"_id": ObjectId(role_id)},
-        )
+        async def _update(s: AsyncSession):
+            stmt_role = select(RoleORM).options(selectinload(RoleORM.permissions)).where(RoleORM.id == r_uuid)
+            res_role = await s.execute(stmt_role)
+            role = res_role.scalar_one_or_none()
+            if not role:
+                return None
+
+            current_by_id = {permission.id: permission for permission in role.permissions}
+
+            if mode == "add":
+                missing_ids = p_uuids.difference(current_by_id)
+                if missing_ids:
+                    stmt_perms = select(PermissionORM).where(PermissionORM.id.in_(missing_ids))
+                    res_perms = await s.execute(stmt_perms)
+                    for permission in res_perms.scalars().all():
+                        current_by_id[permission.id] = permission
+            else:
+                for permission_id in p_uuids:
+                    current_by_id.pop(permission_id, None)
+
+            role.permissions = list(current_by_id.values())
+            await s.commit()
+            await s.refresh(role)
+            return role
+
+        if session:
+            return await _update(session)
+        async with AsyncSessionLocal() as db_session:
+            return await _update(db_session)
+
+    async def delete(self, role_id: str | uuid.UUID, session: Optional[AsyncSession] = None) -> bool:
+        r_uuid = uuid.UUID(str(role_id)) if isinstance(role_id, str) else role_id
+        stmt = delete(RoleORM).where(RoleORM.id == r_uuid)
+        if session:
+            res = await session.execute(stmt)
+            await session.commit()
+            return res.rowcount > 0
+        async with AsyncSessionLocal() as db_session:
+            res = await db_session.execute(stmt)
+            await db_session.commit()
+            return res.rowcount > 0

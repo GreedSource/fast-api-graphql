@@ -1,297 +1,197 @@
-# server/repositories/user_repository.py
-from bson import ObjectId
+import uuid
+from typing import List, Optional
 
-from server.db.mongo import get_mongo_db
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
+
+from server.db.session import AsyncSessionLocal
 from server.decorators.singleton_decorator import singleton
-from server.helpers.logger_helper import LoggerHelper
-from server.helpers.mongo_helper import MongoHelper
+from server.models.orm.permission_orm import PermissionORM
+from server.models.orm.role_orm import RoleORM
+from server.models.orm.user_orm import UserORM
 
 
 @singleton
 class UserRepository:
-    def __init__(self):
-        self.__mongo = MongoHelper(
-            db=get_mongo_db(),
-            allowed_collections={"users"},
+    async def create(self, user_data: dict, session: Optional[AsyncSession] = None) -> UserORM:
+        data = dict(user_data)
+        if "role_id" in data and isinstance(data["role_id"], str):
+            data["role_id"] = uuid.UUID(data["role_id"])
+
+        user = UserORM(**data)
+        if session:
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+            return user
+        async with AsyncSessionLocal() as db_session:
+            db_session.add(user)
+            await db_session.commit()
+            await db_session.refresh(user)
+            return user
+
+    async def find_by_email(self, email: str, session: Optional[AsyncSession] = None) -> Optional[UserORM]:
+        stmt = (
+            select(UserORM)
+            .options(
+                joinedload(UserORM.role).selectinload(RoleORM.permissions).selectinload(PermissionORM.module),
+                joinedload(UserORM.role).selectinload(RoleORM.permissions).selectinload(PermissionORM.action),
+            )
+            .where(UserORM.email == email.strip().lower())
         )
-        LoggerHelper.info("UserRepository initialized")
+        if session:
+            res = await session.execute(stmt)
+            return res.scalar_one_or_none()
+        async with AsyncSessionLocal() as db_session:
+            res = await db_session.execute(stmt)
+            return res.scalar_one_or_none()
 
-    async def create(self, user_data: dict):
-        return await self.__mongo.insert_one("users", user_data)
-
-    async def find_by_email(self, email: str):
-        return await self.__mongo.find_one("users", {"email": email})
-
-    async def find_by_id(self, user_id: str):
-        return await self.__mongo.find_one("users", {"_id": ObjectId(user_id)})
-
-    async def find_all(self):
-        return await self.__mongo.find_many("users", {})
-
-    # ----------------------
-    # Aggregate: user + role
-    # ----------------------
-    async def aggregate_users_with_roles(self):
-        pipeline = [
-            {"$addFields": {"roleIdObj": {"$toObjectId": "$role_id"}}},
-            {
-                "$lookup": {
-                    "from": "roles",
-                    "localField": "roleIdObj",
-                    "foreignField": "_id",
-                    "as": "role",
-                }
-            },
-            {"$unwind": {"path": "$role", "preserveNullAndEmptyArrays": True}},
-            {
-                "$addFields": {
-                    "_id": {"$toString": "$_id"},
-                    "role": {
-                        "$cond": [
-                            {"$ifNull": ["$role", False]},
-                            {
-                                "_id": {"$toString": "$role._id"},
-                                "name": "$role.name",
-                                "description": "$role.description",
-                            },
-                            None,
-                        ]
-                    },
-                }
-            },
-            {
-                "$project": {
-                    # USER
-                    "password": 0,
-                    "role_id": 0,
-                    "created_at": 0,
-                    "updated_at": 0,
-                    # ROLE
-                    "role.created_at": 0,
-                    "role.updated_at": 0,
-                    "role.permissions": 0,
-                    # TEMPORALES
-                    "roleIdObj": 0,
-                }
-            },
-        ]
-
-        return await self.__mongo.aggregate("users", pipeline)
-
-    async def aggregate_user_with_role(self, user_id: str):
-        pipeline = [
-            {"$match": {"_id": ObjectId(user_id)}},
-            {
-                "$addFields": {
-                    "roleIdObj": {
-                        "$cond": {
-                            "if": {"$ifNull": ["$role_id", False]},
-                            "then": {"$toObjectId": "$role_id"},
-                            "else": None,
-                        }
-                    }
-                }
-            },
-            {
-                "$lookup": {
-                    "from": "roles",
-                    "localField": "roleIdObj",
-                    "foreignField": "_id",
-                    "as": "role",
-                }
-            },
-            {"$unwind": {"path": "$role", "preserveNullAndEmptyArrays": True}},
-            {
-                "$addFields": {
-                    "_id": {"$toString": "$_id"},
-                    "role": {
-                        "$cond": [
-                            {"$ifNull": ["$role", False]},
-                            {
-                                "_id": {"$toString": "$role._id"},
-                                "name": "$role.name",
-                                "description": "$role.description",
-                                "active": "$role.active",
-                                "permissions": [],
-                            },
-                            None,
-                        ]
-                    },
-                }
-            },
-            {
-                "$project": {
-                    "password": 0,
-                    "role_id": 0,
-                    "created_at": 0,
-                    "updated_at": 0,
-                    "role.created_at": 0,
-                    "role.updated_at": 0,
-                    "roleIdObj": 0,
-                }
-            },
-        ]
-        results = await self.__mongo.aggregate("users", pipeline)
-        return results[0] if results else None
-
-    async def aggregate_user_with_role_permissions(self, user_id: str):
-        pipeline = [
-            # 1️⃣ Match usuario primero (mejor performance)
-            {"$match": {"_id": ObjectId(user_id)}},
-            # 2️⃣ Convertir role_id → ObjectId (solo si existe)
-            {
-                "$addFields": {
-                    "roleIdObj": {
-                        "$cond": {
-                            "if": {"$ifNull": ["$role_id", False]},
-                            "then": {"$toObjectId": "$role_id"},
-                            "else": None,
-                        }
-                    }
-                }
-            },
-            # 3️⃣ Lookup del rol
-            {
-                "$lookup": {
-                    "from": "roles",
-                    "localField": "roleIdObj",
-                    "foreignField": "_id",
-                    "as": "role",
-                }
-            },
-            # 4️⃣ Unwind role
-            {"$unwind": {"path": "$role", "preserveNullAndEmptyArrays": True}},
-            # 5️⃣ Lookup permisos (usar campo temporal)
-            {
-                "$lookup": {
-                    "from": "permissions",
-                    "localField": "role.permissions",
-                    "foreignField": "_id",
-                    "as": "permissions_docs",
-                }
-            },
-            # 6️⃣ Lookup módulos
-            {
-                "$lookup": {
-                    "from": "modules",
-                    "localField": "permissions_docs.module_id",
-                    "foreignField": "_id",
-                    "as": "modules",
-                }
-            },
-            # 7️⃣ Lookup actions
-            {
-                "$lookup": {
-                    "from": "actions",
-                    "localField": "permissions_docs.action_id",
-                    "foreignField": "_id",
-                    "as": "actions",
-                }
-            },
-            # 8️⃣ Mapear permisos
-            {
-                "$addFields": {
-                    "mapped_permissions": {
-                        "$map": {
-                            "input": {"$ifNull": ["$permissions_docs", []]},
-                            "as": "perm",
-                            "in": {
-                                "action": {
-                                    "$arrayElemAt": [
-                                        {
-                                            "$map": {
-                                                "input": {
-                                                    "$filter": {
-                                                        "input": "$actions",
-                                                        "as": "a",
-                                                        "cond": {
-                                                            "$eq": [
-                                                                "$$a._id",
-                                                                "$$perm.action_id",
-                                                            ]
-                                                        },
-                                                    }
-                                                },
-                                                "as": "f",
-                                                "in": "$$f.key",
-                                            }
-                                        },
-                                        0,
-                                    ]
-                                },
-                                "type": {
-                                    "$arrayElemAt": [
-                                        {
-                                            "$map": {
-                                                "input": {
-                                                    "$filter": {
-                                                        "input": "$modules",
-                                                        "as": "m",
-                                                        "cond": {
-                                                            "$eq": [
-                                                                "$$m._id",
-                                                                "$$perm.module_id",
-                                                            ]
-                                                        },
-                                                    }
-                                                },
-                                                "as": "f",
-                                                "in": "$$f.key",
-                                            }
-                                        },
-                                        0,
-                                    ]
-                                },
-                            },
-                        }
-                    }
-                }
-            },
-            # 9️⃣ Construir role correctamente
-            {
-                "$addFields": {
-                    "role": {
-                        "$cond": {
-                            "if": {"$not": ["$role"]},
-                            "then": None,
-                            "else": {
-                                "_id": {"$toString": "$role._id"},
-                                "name": "$role.name",
-                                "permissions": "$mapped_permissions",
-                            },
-                        }
-                    },
-                    "_id": {"$toString": "$_id"},
-                }
-            },
-            # 🔟 Project limpio
-            {
-                "$project": {
-                    "password": 0,
-                    "role_id": 0,
-                    "roleIdObj": 0,
-                    "permissions_docs": 0,
-                    "modules": 0,
-                    "actions": 0,
-                    "mapped_permissions": 0,
-                    "created_at": 0,
-                    "updated_at": 0,
-                }
-            },
-        ]
-
-        results = await self.__mongo.aggregate("users", pipeline)
-        return results[0] if results else None
-
-    async def update(self, user_id: str, update_data: dict):
-        return await self.__mongo.update_one(
-            "users",
-            {"_id": ObjectId(user_id)},
-            {"$set": update_data},
+    async def find_by_id(self, user_id: str | uuid.UUID, session: Optional[AsyncSession] = None) -> Optional[UserORM]:
+        u_uuid = uuid.UUID(str(user_id)) if isinstance(user_id, str) else user_id
+        stmt = (
+            select(UserORM)
+            .options(
+                joinedload(UserORM.role).selectinload(RoleORM.permissions).selectinload(PermissionORM.module),
+                joinedload(UserORM.role).selectinload(RoleORM.permissions).selectinload(PermissionORM.action),
+            )
+            .where(UserORM.id == u_uuid)
         )
+        if session:
+            res = await session.execute(stmt)
+            return res.scalar_one_or_none()
+        async with AsyncSessionLocal() as db_session:
+            res = await db_session.execute(stmt)
+            return res.scalar_one_or_none()
 
-    async def delete(self, user_id: str):
-        return await self.__mongo.delete_one(
-            "users",
-            {"_id": ObjectId(user_id)},
-        )
+    async def find_all(self, session: Optional[AsyncSession] = None) -> List[UserORM]:
+        stmt = select(UserORM).options(joinedload(UserORM.role)).order_by(UserORM.name)
+        if session:
+            res = await session.execute(stmt)
+            return list(res.scalars().all())
+        async with AsyncSessionLocal() as db_session:
+            res = await db_session.execute(stmt)
+            return list(res.scalars().all())
+
+    async def aggregate_users_with_roles(self, session: Optional[AsyncSession] = None) -> List[dict]:
+        users = await self.find_all(session=session)
+        result = []
+        for u in users:
+            result.append(
+                {
+                    "_id": str(u.id),
+                    "id": str(u.id),
+                    "name": u.name,
+                    "lastname": u.lastname,
+                    "email": u.email,
+                    "role": (
+                        {
+                            "_id": str(u.role.id),
+                            "id": str(u.role.id),
+                            "name": u.role.name,
+                            "description": u.role.description,
+                            "active": u.role.active,
+                            "permissions": [],
+                        }
+                        if u.role
+                        else None
+                    ),
+                }
+            )
+        return result
+
+    async def aggregate_user_with_role(
+        self, user_id: str | uuid.UUID, session: Optional[AsyncSession] = None
+    ) -> Optional[dict]:
+        user = await self.find_by_id(user_id, session=session)
+        if not user:
+            return None
+        return {
+            "_id": str(user.id),
+            "id": str(user.id),
+            "name": user.name,
+            "lastname": user.lastname,
+            "email": user.email,
+            "role": (
+                {
+                    "_id": str(user.role.id),
+                    "id": str(user.role.id),
+                    "name": user.role.name,
+                    "description": user.role.description,
+                    "active": True,
+                    "permissions": [],
+                }
+                if user.role
+                else None
+            ),
+        }
+
+    async def aggregate_user_with_role_permissions(
+        self, user_id: str | uuid.UUID, session: Optional[AsyncSession] = None
+    ) -> Optional[dict]:
+        user = await self.find_by_id(user_id, session=session)
+        if not user:
+            return None
+
+        mapped_permissions = []
+        if user.role and user.role.permissions:
+            for p in user.role.permissions:
+                if p.module and p.action:
+                    mapped_permissions.append({"type": p.module.key, "action": p.action.key})
+
+        return {
+            "_id": str(user.id),
+            "id": str(user.id),
+            "name": user.name,
+            "lastname": user.lastname,
+            "email": user.email,
+            "role": (
+                {
+                    "_id": str(user.role.id),
+                    "id": str(user.role.id),
+                    "name": user.role.name,
+                    "description": user.role.description,
+                    "active": user.role.active,
+                    "permissions": mapped_permissions,
+                }
+                if user.role
+                else None
+            ),
+        }
+
+    async def update(
+        self, user_id: str | uuid.UUID, update_data: dict, session: Optional[AsyncSession] = None
+    ) -> Optional[UserORM]:
+        user = await self.find_by_id(user_id, session=session)
+        if not user:
+            return None
+
+        data = dict(update_data)
+        if "role_id" in data and isinstance(data["role_id"], str):
+            data["role_id"] = uuid.UUID(data["role_id"])
+
+        for key, val in data.items():
+            if hasattr(user, key) and val is not None:
+                setattr(user, key, val)
+
+        if session:
+            await session.commit()
+            await session.refresh(user)
+            return user
+        async with AsyncSessionLocal() as db_session:
+            db_session.add(user)
+            await db_session.commit()
+            await db_session.refresh(user)
+            return user
+
+    async def delete(self, user_id: str | uuid.UUID, session: Optional[AsyncSession] = None) -> bool:
+        u_uuid = uuid.UUID(str(user_id)) if isinstance(user_id, str) else user_id
+        stmt = delete(UserORM).where(UserORM.id == u_uuid)
+        if session:
+            res = await session.execute(stmt)
+            await session.commit()
+            return res.rowcount > 0
+        async with AsyncSessionLocal() as db_session:
+            res = await db_session.execute(stmt)
+            await db_session.commit()
+            return res.rowcount > 0

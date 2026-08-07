@@ -6,8 +6,8 @@ from server.decorators.require_token_decorator import require_token
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 from server.helpers.logger_helper import LoggerHelper
-from server.models.response_model import ResponseModel
-from server.models.user_model import RegisterModel, ResetPasswordModel
+from server.models.dto.response_dto import ResponseModel
+from server.models.dto.user_dto import RegisterModel, ResetPasswordModel
 from server.services.auth_service import AuthService
 
 

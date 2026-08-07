@@ -1,6 +1,6 @@
 from server.decorators.singleton_decorator import singleton
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
-from server.models.permission_model import (
+from server.models.dto.permission_dto import (
     CreatePermissionModel,
     PermissionItemModel,
     PermissionListModel,
@@ -18,49 +18,54 @@ class PermissionService:
         self.__action_service = ActionService()
 
     async def create(self, payload: CreatePermissionModel):
-        module = await self.__module_service.find_by_id(payload.module_id)
-        if not module:
+        module_orm = await self.__module_service.find_by_id(str(payload.module_id))
+        if not module_orm:
+            module_orm = await self.__module_service.find_by_key(str(payload.module_id))
+        if not module_orm:
             raise CustomGraphQLExceptionHelper("Module not found")
 
-        action = await self.__action_service.find_by_id(payload.action_id)
-        if not action:
+        action_orm = await self.__action_service.find_by_id(str(payload.action_id))
+        if not action_orm:
+            action_orm = await self.__action_service.find_by_key(str(payload.action_id))
+        if not action_orm:
             raise CustomGraphQLExceptionHelper("Action not found")
 
-        permission_id = await self.__permission_repo.create(
+        # Verificar duplicado
+        existing = await self.__permission_repo.find_by_module_and_action(module_orm.id, action_orm.id)
+        if existing:
+            raise CustomGraphQLExceptionHelper("El permiso ya existe para ese módulo y acción")
+
+        perm_orm = await self.__permission_repo.create(
             {
-                "module_id": module["_id"],
-                "action_id": action["_id"],
+                "module_id": module_orm.id,
+                "action_id": action_orm.id,
                 "description": payload.description,
             }
         )
 
         return PermissionItemModel(
-            id=str(permission_id),
-            moduleId=module["key"],
-            actionId=action["key"],
-            moduleKey=module["key"],
-            actionKey=action["key"],
-            description=payload.description,
-        ).model_dump()
+            id=perm_orm.id,
+            moduleId=perm_orm.module_id,
+            actionId=perm_orm.action_id,
+            moduleKey=module_orm.key,
+            actionKey=action_orm.key,
+            description=perm_orm.description,
+        ).model_dump(by_alias=True)
 
     async def get_all(self):
-        permissions = await self.__permission_repo.find_all()
-
-        # Enriquecer cada permiso con los nombres de modulo y accion
-        enriched_permissions = []
-        for perm in permissions:
-            module = await self.__module_service.find_by_id(perm.get("moduleId"))
-            action = await self.__action_service.find_by_id(perm.get("actionId"))
-
-            enriched_perm = {
-                **perm,
-                "moduleKey": module.get("key") if module else "unknown",
-                "actionKey": action.get("key") if action else "unknown",
-            }
-            enriched_permissions.append(enriched_perm)
-
-        return PermissionListModel.model_validate(enriched_permissions).model_dump()
+        perm_orms = await self.__permission_repo.find_all()
+        result = [
+            PermissionItemModel(
+                id=p.id,
+                moduleId=p.module_id,
+                actionId=p.action_id,
+                moduleKey=p.module.key if p.module else "unknown",
+                actionKey=p.action.key if p.action else "unknown",
+                description=p.description,
+            )
+            for p in perm_orms
+        ]
+        return PermissionListModel.model_validate(result).model_dump(by_alias=True)
 
     async def delete(self, permission_id: str):
-        result = await self.__permission_repo.delete(permission_id)
-        return result.deleted_count == 1
+        return await self.__permission_repo.delete(permission_id)

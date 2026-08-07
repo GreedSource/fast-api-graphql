@@ -12,20 +12,6 @@ from graphql import parse
 from graphql import subscribe as graphql_subscribe
 from starlette.background import BackgroundTasks
 
-from server.config.settings import settings
-from server.db.mongo import close_mongo
-from server.enums.http_error_code_enum import HTTPErrorCode
-from server.helpers.logger_helper import LoggerHelper
-from server.helpers.mail_helper import MailHelper
-from server.helpers.redis_helper import RedisHelper
-from server.helpers.template_helper import TemplateHelper
-from server.middlewares.cookie_logging_middleware import CookieLoggingMiddleware
-from server.middlewares.ws_logger_middleware import WSLoggerMiddleware
-from server.schema import schema
-from server.services.user_service import UserService
-from server.utils.auth_utils import verify_token
-from server.utils.custom_error_formatter_utils import custom_format_error
-
 # Desactivar logs ruidosos de ariadne
 logging.getLogger("ariadne").setLevel(logging.CRITICAL)
 
@@ -49,6 +35,10 @@ def _parse_ws_cookies(websocket: WebSocket) -> dict[str, str]:
 
 
 async def _build_ws_auth_context(websocket: WebSocket, payload: dict | None = None) -> dict:
+    from server.config.settings import settings
+    from server.services.user_service import UserService
+    from server.utils.auth_utils import verify_token
+
     payload = payload or {}
     connection_headers = payload.get("headers") or {}
     auth_header = (
@@ -100,6 +90,18 @@ async def _build_ws_auth_context(websocket: WebSocket, payload: dict | None = No
 
 
 def create_app() -> FastAPI:
+    from server.config.settings import settings
+    from server.db.session import engine
+    from server.enums.http_error_code_enum import HTTPErrorCode
+    from server.helpers.logger_helper import LoggerHelper
+    from server.helpers.mail_helper import MailHelper
+    from server.helpers.redis_helper import RedisHelper
+    from server.helpers.template_helper import TemplateHelper
+    from server.middlewares.cookie_logging_middleware import CookieLoggingMiddleware
+    from server.middlewares.ws_logger_middleware import WSLoggerMiddleware
+    from server.schema import schema
+    from server.utils.custom_error_formatter_utils import custom_format_error
+
     app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
 
     # ✅ Inicializar MailHelper AQUÍ
@@ -268,10 +270,7 @@ def create_app() -> FastAPI:
     async def shutdown_event():
         LoggerHelper.info("Shutting down application...")
         await RedisHelper().close()
-        await close_mongo()
+        await engine.dispose()
         LoggerHelper.info("Application shutdown complete")
 
     return app
-
-
-app = create_app()
