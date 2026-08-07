@@ -17,23 +17,29 @@ services:
     environment:
       - WATCHFILES_FORCE_POLLING=true
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - POSTGRES_SERVER=${POSTGRES_SERVER:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-graphqlapp}
     depends_on:
-      - mongo
+      - postgres
       - redis
     command: >
       sh -c "python manage.py migrate && python manage.py seed-all && uvicorn app:app --host 0.0.0.0 --port $PORT --reload --ws websockets --proxy-headers --timeout-graceful-shutdown 2"
 
-  mongo:
-    image: mongo:7
-    container_name: mongodb
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
     restart: unless-stopped
     ports:
-      - '27017:27017'
-    volumes:
-      - mongo_data:/data/db
+      - "5432:5432"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-graphqlapp}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
@@ -44,4 +50,5 @@ services:
     command: redis-server --appendonly yes
 
 volumes:
-  mongo_data:
+  postgres_data:
+

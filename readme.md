@@ -1,6 +1,6 @@
 # FastAPI GraphQL API
 
-API backend construida con `FastAPI`, `Ariadne` y `MongoDB`, orientada a autenticación JWT, control de acceso por roles (RBAC) y administración de usuarios, roles, módulos, acciones y permisos.
+API backend construida con `FastAPI`, `Ariadne` y `PostgreSQL`, orientada a autenticación JWT, control de acceso por roles (RBAC) y administración de usuarios, roles, módulos, acciones y permisos.
 
 ## Características
 
@@ -8,8 +8,8 @@ API backend construida con `FastAPI`, `Ariadne` y `MongoDB`, orientada a autenti
 - Soporte HTTP y WebSocket para GraphQL
 - Autenticación con JWT
 - RBAC con roles, permisos, módulos y acciones
-- Persistencia async con `motor`
-- Migraciones y seeders para MongoDB
+- Persistencia async con `SQLAlchemy 2.0` y `asyncpg`
+- Migraciones y seeders para PostgreSQL
 - Plantillas HTML para correo
 - Contenedorización con Docker Compose
 - Linting con `ruff`
@@ -19,7 +19,7 @@ API backend construida con `FastAPI`, `Ariadne` y `MongoDB`, orientada a autenti
 - Python 3.12
 - FastAPI
 - Ariadne
-- MongoDB + Motor
+- PostgreSQL + SQLAlchemy async
 - Pydantic Settings
 - Uvicorn
 - Ruff
@@ -58,8 +58,10 @@ Capas principales:
 - `server/schema/`: SDL GraphQL y resolvers
 - `server/services/`: lógica de negocio
 - `server/repositories/`: acceso a datos
-- `server/models/`: modelos usados por el dominio
-- `server/db/`: conexión, migraciones y seeders
+- `server/models/`: modelos DTO y entidades ORM
+- `server/db/`: conexión y sesión async
+- `server/migrations/`: migraciones DDL versionadas con tabla `schema_migrations`
+- `server/seeders/`: datos base
 
 ## Requisitos
 
@@ -71,7 +73,7 @@ Capas principales:
 ### Opción local
 
 - Python 3.12
-- MongoDB
+- PostgreSQL
 
 ## Configuración
 
@@ -100,8 +102,11 @@ REFRESH_COOKIE_NAME=refresh_token
 SESSION_SECRET_KEY=change_this_to_a_strong_session_secret
 SESSION_MAX_AGE=86400
 
-MONGO_URI=mongodb://root:example@mongo:27017
-MONGO_DB_NAME=graphqlapp
+POSTGRES_SERVER=postgres
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=graphqlapp
 RUN_SEEDERS=true
 
 MAIL_SERVER=smtp.gmail.com
@@ -120,7 +125,7 @@ Notas:
 
 - `CORS_ORIGINS` se parsea como una cadena separada por comas
 - `RUN_SEEDERS=true` permite que `seed-all` ejecute seeders
-- en Docker Compose el contenedor usa `MONGO_URI=mongodb://root:example@mongo:27017`
+- en Docker Compose el contenedor usa `POSTGRES_SERVER=postgres`
 
 ## Ejecutar con Docker Compose
 
@@ -133,7 +138,8 @@ docker-compose up -d --build
 Esto levanta:
 
 - `api`
-- `mongo`
+- `postgres`
+- `redis`
 
 El servicio `api` ejecuta al iniciar:
 
@@ -172,13 +178,16 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Asegúrate de tener MongoDB disponible y configura `.env`
+3. Asegúrate de tener PostgreSQL disponible y configura `.env`
 
 Ejemplo local:
 
 ```env
-MONGO_URI=mongodb://localhost:27017
-MONGO_DB_NAME=graphqlapp
+POSTGRES_SERVER=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=graphqlapp
 ```
 
 4. Corre migraciones:
@@ -214,7 +223,7 @@ uvicorn app:app --host 0.0.0.0 --port 8000 --reload --ws websockets
 
 Qué hace cada uno:
 
-- `migrate`: aplica migraciones e índices/validaciones en MongoDB
+- `migrate`: aplica migraciones DDL pendientes en PostgreSQL y las registra en `schema_migrations`
 - `seed-modules`: crea módulos base
 - `seed-actions`: crea acciones base
 - `seed-permissions`: genera permisos a partir de módulos y acciones

@@ -2,50 +2,43 @@ import argparse
 import asyncio
 
 from server.config.settings import settings
-from server.db.mongo import get_mongo_db
 from server.helpers.logger_helper import LoggerHelper
 
 
 async def _run_migrate():
-    from server.db.migrations import run_migrations
+    from server.migrations import run_migrations
 
-    db = get_mongo_db()
-    await run_migrations(db)
+    run_migrations()
 
 
 async def _run_seed_users():
-    from server.db.seeders import seed_users
+    from server.seeders import seed_users
 
-    db = get_mongo_db()
-    await seed_users(db)
+    await seed_users()
 
 
 async def _run_seed_modules():
-    from server.db.seeders import seed_modules
+    from server.seeders import seed_modules
 
-    db = get_mongo_db()
-    await seed_modules(db)
+    await seed_modules()
 
 
 async def _run_seed_actions():
-    from server.db.seeders import seed_actions
+    from server.seeders import seed_actions
 
-    db = get_mongo_db()
-    await seed_actions(db)
+    await seed_actions()
 
 
 async def _run_seed_permissions():
-    from server.db.seeders import seed_permissions
+    from server.seeders import seed_permissions
 
-    db = get_mongo_db()
-    await seed_permissions(db)
+    await seed_permissions()
 
 
 async def _run_seed_roles():
-    from server.db.seeders import seed_roles
+    from server.seeders import seed_roles
 
-    db = get_mongo_db()
-    await seed_roles(db)
+    await seed_roles()
 
 
 async def _run_seed_all():
@@ -53,18 +46,38 @@ async def _run_seed_all():
         LoggerHelper.info("RUN_SEEDERS=false, semilla global omitida.")
         return
 
-    from server.db.seeders import seed_all
+    from server.seeders import seed_all
 
-    db = get_mongo_db()
-    await seed_all(db)
+    await seed_all()
 
 
 async def _run_status():
-    db = get_mongo_db()
-    migrations = await db["migrations"].find({}).to_list(length=100)
-    LoggerHelper.info("Migraciones aplicadas:")
-    for m in migrations:
-        LoggerHelper.info(f"- {m.get('name')} @ {m.get('applied_at')}")
+    from sqlalchemy import text
+
+    from server.db.session import engine
+    from server.migrations import (
+        MIGRATIONS_TABLE,
+        _ensure_migrations_table,
+        _get_applied_versions,
+        _load_migrations,
+    )
+
+    LoggerHelper.info("Verificando conexión a PostgreSQL...")
+    async with engine.connect() as conn:
+        result = await conn.execute(text("SELECT version()"))
+        version = result.scalar()
+        LoggerHelper.info(f"Conectado a: {version}")
+
+        await _ensure_migrations_table(conn)
+        applied_versions = await _get_applied_versions(conn)
+        migrations = _load_migrations()
+        pending = [migration.version for migration in migrations if migration.version not in applied_versions]
+
+        LoggerHelper.info(f"Tabla de migraciones: {MIGRATIONS_TABLE}")
+        LoggerHelper.info(f"Migraciones aplicadas: {len(applied_versions)}")
+        LoggerHelper.info(f"Migraciones pendientes: {len(pending)}")
+        for version_name in pending:
+            LoggerHelper.warning(f"Pendiente: {version_name}")
 
 
 def main():
@@ -86,7 +99,10 @@ def main():
     args = parser.parse_args()
 
     if args.command == "migrate":
-        asyncio.run(_run_migrate())
+        # run_migrations es síncrona (usa asyncio.run internamente)
+        from server.migrations import run_migrations
+
+        run_migrations()
     elif args.command == "seed-modules":
         asyncio.run(_run_seed_modules())
     elif args.command == "seed-actions":

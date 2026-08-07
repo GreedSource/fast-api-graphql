@@ -23,10 +23,12 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Dependencias SOLO para build
+# Dependencias SOLO para build (incluyendo libpq-dev y build-essential para psycopg2)
 RUN apt-get update && apt-get install --no-install-recommends -y \
     gcc \
     python3-dev \
+    libpq-dev \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Crear venv
@@ -52,9 +54,10 @@ RUN addgroup --system app && adduser --system --group app
 
 WORKDIR /app
 
-# Solo dependencias mínimas runtime
+# Solo dependencias mínimas runtime (libpq5 requerida para el driver psycopg2)
 RUN apt-get update && apt-get install --no-install-recommends -y \
     ca-certificates \
+    libpq5 \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
