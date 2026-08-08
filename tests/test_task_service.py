@@ -53,6 +53,7 @@ async def test_task_service_update_rejects_missing_task():
         await service.update(UpdateTaskModel(id=TASK_ID, title="New title"))
 
     assert exc_info.value.message == "Tarea no encontrada"
+    assert exc_info.value.status_code == 404
 
 
 @pytest.mark.asyncio

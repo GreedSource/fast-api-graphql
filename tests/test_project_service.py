@@ -32,6 +32,7 @@ async def test_project_service_update_rejects_missing_project():
         await service.update(UpdateProjectModel(id=PROJECT_ID, name="Apollo 2"))
 
     assert exc_info.value.message == "Proyecto no encontrado"
+    assert exc_info.value.status_code == 404
 
 
 @pytest.mark.asyncio

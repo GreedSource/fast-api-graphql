@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from server.db.session import AsyncSessionLocal
 from server.decorators.singleton_decorator import singleton
+from server.models.orm.permission_orm import PermissionORM
 from server.models.orm.project_member_orm import ProjectMemberORM
 from server.models.orm.project_role_orm import ProjectRoleORM
 
@@ -40,7 +41,14 @@ class ProjectMemberRepository:
 
         stmt = (
             select(ProjectMemberORM)
-            .options(selectinload(ProjectMemberORM.project_role))
+            .options(
+                selectinload(ProjectMemberORM.project_role)
+                .selectinload(ProjectRoleORM.permissions)
+                .selectinload(PermissionORM.module),
+                selectinload(ProjectMemberORM.project_role)
+                .selectinload(ProjectRoleORM.permissions)
+                .selectinload(PermissionORM.action),
+            )
             .where(ProjectMemberORM.project_id == p_uuid, ProjectMemberORM.user_id == u_uuid)
         )
         if session:
@@ -60,7 +68,14 @@ class ProjectMemberRepository:
 
         stmt = (
             select(ProjectMemberORM)
-            .options(selectinload(ProjectMemberORM.project_role))
+            .options(
+                selectinload(ProjectMemberORM.project_role)
+                .selectinload(ProjectRoleORM.permissions)
+                .selectinload(PermissionORM.module),
+                selectinload(ProjectMemberORM.project_role)
+                .selectinload(ProjectRoleORM.permissions)
+                .selectinload(PermissionORM.action),
+            )
             .where(ProjectMemberORM.project_id == p_uuid)
             .order_by(ProjectMemberORM.created_at.desc())
         )

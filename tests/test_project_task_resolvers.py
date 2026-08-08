@@ -7,7 +7,7 @@ from server.decorators import require_token_decorator
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 from server.schema.projects.resolver import ProjectResolver
 from server.schema.tasks.resolver import TaskResolver
-from tests.factories import PROJECT_ID, TASK_ID, make_current_user
+from tests.factories import PROJECT_ID, TASK_ID, make_current_user, make_task
 
 
 def make_info(permissions):
@@ -52,11 +52,16 @@ async def test_task_resolver_complete_delegates_to_service_with_permission(monke
     monkeypatch.setattr(require_token_decorator, "verify_token", lambda token: {"id": "user-1"})
     monkeypatch.setattr(require_token_decorator, "UserService", lambda: user_service)
     resolver = TaskResolver()
-    resolver._TaskResolver__service = SimpleNamespace(complete=AsyncMock(return_value={"id": str(TASK_ID)}))
+    resolver._TaskResolver__service = SimpleNamespace(
+        get_one=AsyncMock(return_value=make_task().__dict__),
+        complete=AsyncMock(return_value={"id": str(TASK_ID)}),
+    )
+    resolver._TaskResolver__authorization = SimpleNamespace(authorize_or_raise=AsyncMock())
 
     result = await resolver.resolve_complete_task(None, make_info(["tasks.complete"]), str(TASK_ID))
 
     assert result.data == {"id": str(TASK_ID)}
+    resolver._TaskResolver__authorization.authorize_or_raise.assert_awaited_once()
     resolver._TaskResolver__service.complete.assert_awaited_once_with(str(TASK_ID))
 
 

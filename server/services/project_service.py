@@ -1,4 +1,5 @@
 from server.decorators.singleton_decorator import singleton
+from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 from server.models.dto.project_dto import CreateProjectModel, ProjectItemModel, ProjectListModel, UpdateProjectModel
 from server.repositories.project_repository import ProjectRepository
@@ -29,14 +30,17 @@ class ProjectService:
             payload.model_dump(exclude={"id"}, exclude_none=True),
         )
         if not project_orm:
-            raise CustomGraphQLExceptionHelper("Proyecto no encontrado")
+            raise CustomGraphQLExceptionHelper("Proyecto no encontrado", HTTPErrorCode.NOT_FOUND)
         return ProjectItemModel.model_validate(project_orm).model_dump(by_alias=True, mode="json")
 
     async def archive(self, project_id: str):
         project_orm = await self.__repository.archive(project_id)
         if not project_orm:
-            raise CustomGraphQLExceptionHelper("Proyecto no encontrado")
+            raise CustomGraphQLExceptionHelper("Proyecto no encontrado", HTTPErrorCode.NOT_FOUND)
         return ProjectItemModel.model_validate(project_orm).model_dump(by_alias=True, mode="json")
 
     async def delete(self, project_id: str):
-        return await self.__repository.delete(project_id)
+        deleted = await self.__repository.delete(project_id)
+        if not deleted:
+            raise CustomGraphQLExceptionHelper("Proyecto no encontrado", HTTPErrorCode.NOT_FOUND)
+        return deleted

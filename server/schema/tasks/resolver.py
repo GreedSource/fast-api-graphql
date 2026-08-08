@@ -4,6 +4,7 @@ from server.decorators.require_permission_decorator import require_permission
 from server.decorators.require_token_decorator import require_token
 from server.models.dto.response_dto import ResponseModel
 from server.models.dto.task_dto import CreateTaskModel, UpdateTaskModel
+from server.services.authorization_service import AuthorizationService
 from server.services.task_service import TaskService
 
 
@@ -12,6 +13,7 @@ class TaskResolver:
         self.query = QueryType()
         self.mutation = MutationType()
         self.__service = TaskService()
+        self.__authorization = AuthorizationService()
 
         self.query.set_field("tasks", self.resolve_tasks)
         self.query.set_field("task", self.resolve_task)
@@ -24,6 +26,10 @@ class TaskResolver:
     @require_token
     @require_permission(type="tasks", action="read")
     async def resolve_tasks(self, _, info, projectId=None):
+        if projectId:
+            await self.__authorization.authorize_or_raise(
+                info.context.get("current_user"), "tasks", "read", context={"project_id": projectId}
+            )
         data = await self.__service.get_all(project_id=projectId)
         return ResponseModel(status=200, message="Tasks fetched", data=data)
 
@@ -31,6 +37,8 @@ class TaskResolver:
     @require_permission(type="tasks", action="read")
     async def resolve_task(self, _, info, id):
         data = await self.__service.get_one(id)
+        if data:
+            await self.__authorization.authorize_or_raise(info.context.get("current_user"), "tasks", "read", data)
         return ResponseModel(status=200, message="Task fetched", data=data)
 
     @require_token
@@ -44,24 +52,38 @@ class TaskResolver:
     @require_permission(type="tasks", action="update")
     async def resolve_update_task(self, _, info, input):
         model = UpdateTaskModel(**input)
+        resource = await self.__service.get_one(str(model.id))
+        if resource:
+            await self.__authorization.authorize_or_raise(info.context.get("current_user"), "tasks", "update", resource)
         data = await self.__service.update(model)
         return ResponseModel(status=200, message="Task updated", data=data)
 
     @require_token
     @require_permission(type="tasks", action="assign")
     async def resolve_assign_task(self, _, info, id, assigneeId):
+        resource = await self.__service.get_one(id)
+        if resource:
+            await self.__authorization.authorize_or_raise(info.context.get("current_user"), "tasks", "assign", resource)
         data = await self.__service.assign(id, assigneeId)
         return ResponseModel(status=200, message="Task assigned", data=data)
 
     @require_token
     @require_permission(type="tasks", action="complete")
     async def resolve_complete_task(self, _, info, id):
+        resource = await self.__service.get_one(id)
+        if resource:
+            await self.__authorization.authorize_or_raise(
+                info.context.get("current_user"), "tasks", "complete", resource
+            )
         data = await self.__service.complete(id)
         return ResponseModel(status=200, message="Task completed", data=data)
 
     @require_token
     @require_permission(type="tasks", action="delete")
     async def resolve_delete_task(self, _, info, id):
+        resource = await self.__service.get_one(id)
+        if resource:
+            await self.__authorization.authorize_or_raise(info.context.get("current_user"), "tasks", "delete", resource)
         data = await self.__service.delete(id)
         return ResponseModel(status=200, message="Task deleted", data=data)
 
