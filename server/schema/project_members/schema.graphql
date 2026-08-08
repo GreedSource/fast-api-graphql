@@ -1,0 +1,55 @@
+type ProjectRole {
+  id: ID!
+  name: String!
+  description: String
+  active: Boolean!
+}
+
+type ProjectMember {
+  id: ID!
+  projectId: ID!
+  userId: ID!
+  projectRoleId: ID!
+  projectRole: ProjectRole
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input AddProjectMemberInput {
+  projectId: ID!
+  userId: ID!
+  projectRoleId: ID!
+}
+
+input UpdateProjectMemberRoleInput {
+  id: ID!
+  projectRoleId: ID!
+}
+
+type ProjectMemberResponse {
+  status: Int!
+  message: String
+  data: ProjectMember
+}
+
+type ProjectMemberListResponse {
+  status: Int!
+  message: String
+  data: [ProjectMember!]!
+}
+
+type ProjectMemberBooleanResponse {
+  status: Int!
+  message: String
+  data: Boolean
+}
+
+extend type Query {
+  projectMembers(projectId: ID!): ProjectMemberListResponse!
+}
+
+extend type Mutation {
+  addProjectMember(input: AddProjectMemberInput!): ProjectMemberResponse!
+  updateProjectMemberRole(input: UpdateProjectMemberRoleInput!): ProjectMemberResponse!
+  removeProjectMember(id: ID!): ProjectMemberBooleanResponse!
+}

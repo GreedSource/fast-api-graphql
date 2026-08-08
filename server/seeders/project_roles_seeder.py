@@ -1,0 +1,39 @@
+from sqlalchemy import select
+
+from server.db.session import AsyncSessionLocal
+from server.helpers.logger_helper import LoggerHelper
+from server.models.orm.permission_orm import PermissionORM
+from server.models.orm.project_role_orm import ProjectRoleORM
+from server.seeders.rbac_catalog import DEFAULT_ROLES, role_permission_keys
+
+PROJECT_ROLE_NAMES = {"project_manager", "developer", "client", "viewer"}
+
+
+async def seed():
+    async with AsyncSessionLocal() as session:
+        roles_res = await session.execute(select(ProjectRoleORM))
+        roles_map = {role.name: role for role in roles_res.scalars().all()}
+
+        perms_res = await session.execute(select(PermissionORM))
+        permissions_by_key = {
+            f"{permission.module.key}.{permission.action.key}": permission for permission in perms_res.scalars().all()
+        }
+
+        for role_data in DEFAULT_ROLES:
+            if role_data["name"] not in PROJECT_ROLE_NAMES:
+                continue
+
+            role = roles_map.get(role_data["name"])
+            if not role:
+                role = ProjectRoleORM(**role_data)
+                session.add(role)
+                roles_map[role_data["name"]] = role
+
+            allowed_keys = role_permission_keys(role_data["name"])
+            role.permissions = [
+                permission
+                for permission_key, permission in permissions_by_key.items()
+                if permission_key in allowed_keys
+            ]
+            await session.commit()
+            LoggerHelper.success(f"Project role sembrado: {role_data['name']}")
