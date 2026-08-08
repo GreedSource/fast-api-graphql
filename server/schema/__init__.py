@@ -5,6 +5,7 @@ from ariadne import load_schema_from_path, make_executable_schema
 from server.schema.actions.action_resolver import ActionResolver
 from server.schema.modules.resolver import ModuleResolver
 from server.schema.permission.resolver import PermissionResolver
+from server.schema.project_members.resolver import ProjectMemberResolver
 from server.schema.projects.resolver import ProjectResolver
 from server.schema.tasks.resolver import TaskResolver
 
@@ -20,6 +21,7 @@ __role_resolver = RoleResolver()
 __module_resolver = ModuleResolver()
 __action_resolver = ActionResolver()
 __permission_resolver = PermissionResolver()
+__project_member_resolver = ProjectMemberResolver()
 __project_resolver = ProjectResolver()
 __task_resolver = TaskResolver()
 schemas_path = Path(__file__).parent
@@ -37,6 +39,7 @@ all_resolvers.extend(__role_resolver.get_resolvers())
 all_resolvers.extend(__module_resolver.get_resolvers())
 all_resolvers.extend(__action_resolver.get_resolvers())
 all_resolvers.extend(__permission_resolver.get_resolvers())
+all_resolvers.extend(__project_member_resolver.get_resolvers())
 all_resolvers.extend(__project_resolver.get_resolvers())
 all_resolvers.extend(__task_resolver.get_resolvers())
 

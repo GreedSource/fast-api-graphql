@@ -9,6 +9,8 @@ ROLE_ID = UUID("88888888-8888-8888-8888-888888888888")
 PROJECT_ID = UUID("99999999-9999-9999-9999-999999999999")
 TASK_ID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 USER_ID = UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+PROJECT_ROLE_ID = UUID("cccccccc-cccc-cccc-cccc-cccccccccccc")
+PROJECT_MEMBER_ID = UUID("dddddddd-dddd-dddd-dddd-dddddddddddd")
 
 
 def make_action(**overrides):
@@ -104,6 +106,32 @@ def make_task(**overrides):
         "created_by_id": USER_ID,
         "due_date": None,
         "completed_at": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+    data.update(overrides)
+    return SimpleNamespace(**data)
+
+
+def make_project_role(**overrides):
+    data = {
+        "id": PROJECT_ROLE_ID,
+        "name": "developer",
+        "description": "Project developer",
+        "active": True,
+    }
+    data.update(overrides)
+    return SimpleNamespace(**data)
+
+
+def make_project_member(**overrides):
+    now = datetime.now(timezone.utc)
+    data = {
+        "id": PROJECT_MEMBER_ID,
+        "project_id": PROJECT_ID,
+        "user_id": USER_ID,
+        "project_role_id": PROJECT_ROLE_ID,
+        "project_role": make_project_role(),
         "created_at": now,
         "updated_at": now,
     }
