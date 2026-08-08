@@ -1,4 +1,5 @@
 from server.models.orm.action_orm import ActionORM
+from server.models.orm.audit_log_orm import AuditLogORM
 from server.models.orm.module_orm import ModuleORM
 from server.models.orm.permission_orm import PermissionORM
 from server.models.orm.project_member_orm import ProjectMemberORM
@@ -13,6 +14,7 @@ __all__ = [
     "RoleORM",
     "ModuleORM",
     "ActionORM",
+    "AuditLogORM",
     "PermissionORM",
     "ProjectORM",
     "TaskORM",

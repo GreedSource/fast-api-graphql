@@ -1,0 +1,23 @@
+type AuditLog {
+  id: ID!
+  userId: ID
+  module: String!
+  action: String!
+  resourceType: String
+  resourceId: String
+  status: String!
+  metadata: JSON
+  createdAt: DateTime!
+}
+
+scalar JSON
+
+type AuditLogListResponse {
+  status: Int!
+  message: String
+  data: [AuditLog!]!
+}
+
+extend type Query {
+  auditLogs(limit: Int = 100): AuditLogListResponse!
+}
