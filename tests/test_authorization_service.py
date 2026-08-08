@@ -25,28 +25,42 @@ def make_member(permission_keys):
     )
 
 
+def attach_audit_recorder(service):
+    recorder = SimpleNamespace(record=AsyncMock())
+    service._AuthorizationService__audit_log_service = recorder
+    return recorder
+
+
 @pytest.mark.asyncio
 async def test_authorize_rejects_unauthenticated_user():
-    result = await AuthorizationService().authorize(None, "projects", "read")
+    service = AuthorizationService()
+    recorder = attach_audit_recorder(service)
+
+    result = await service.authorize(None, "projects", "read")
 
     assert result.allowed is False
     assert result.reason == "unauthenticated"
     assert result.status_code == HTTPErrorCode.UNAUTHORIZED
+    recorder.record.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_authorize_allows_non_resource_action_by_global_permission():
+    service = AuthorizationService()
+    recorder = attach_audit_recorder(service)
     user = make_current_user(permissions=["projects.create"])
 
-    result = await AuthorizationService().authorize(user, "projects", "create")
+    result = await service.authorize(user, "projects", "create")
 
     assert result.allowed is True
     assert result.reason == "allowed_by_global_permission"
+    recorder.record.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_authorize_allows_admin_scope_for_project_resource_without_membership():
     service = AuthorizationService()
+    attach_audit_recorder(service)
     service._AuthorizationService__project_member_repository = SimpleNamespace(find_by_project_and_user=AsyncMock())
     user = make_current_user(permissions=["projects.delete", "roles.read"])
 
@@ -60,6 +74,7 @@ async def test_authorize_allows_admin_scope_for_project_resource_without_members
 @pytest.mark.asyncio
 async def test_authorize_rejects_user_without_project_membership():
     service = AuthorizationService()
+    attach_audit_recorder(service)
     service._AuthorizationService__project_member_repository = SimpleNamespace(
         find_by_project_and_user=AsyncMock(return_value=None)
     )
@@ -74,6 +89,7 @@ async def test_authorize_rejects_user_without_project_membership():
 @pytest.mark.asyncio
 async def test_authorize_allows_project_manager_to_update_any_project_task():
     service = AuthorizationService()
+    attach_audit_recorder(service)
     service._AuthorizationService__project_member_repository = SimpleNamespace(
         find_by_project_and_user=AsyncMock(return_value=make_member(["tasks.update", "tasks.assign"]))
     )
@@ -89,6 +105,7 @@ async def test_authorize_allows_project_manager_to_update_any_project_task():
 @pytest.mark.asyncio
 async def test_authorize_allows_developer_to_update_own_task():
     service = AuthorizationService()
+    attach_audit_recorder(service)
     service._AuthorizationService__project_member_repository = SimpleNamespace(
         find_by_project_and_user=AsyncMock(return_value=make_member(["tasks.update"]))
     )
@@ -103,6 +120,7 @@ async def test_authorize_allows_developer_to_update_own_task():
 @pytest.mark.asyncio
 async def test_authorize_rejects_developer_updating_another_users_task():
     service = AuthorizationService()
+    attach_audit_recorder(service)
     service._AuthorizationService__project_member_repository = SimpleNamespace(
         find_by_project_and_user=AsyncMock(return_value=make_member(["tasks.update"]))
     )
@@ -117,6 +135,7 @@ async def test_authorize_rejects_developer_updating_another_users_task():
 @pytest.mark.asyncio
 async def test_authorize_rejects_client_modifying_task():
     service = AuthorizationService()
+    attach_audit_recorder(service)
     service._AuthorizationService__project_member_repository = SimpleNamespace(
         find_by_project_and_user=AsyncMock(return_value=make_member(["tasks.read"]))
     )
@@ -131,6 +150,7 @@ async def test_authorize_rejects_client_modifying_task():
 @pytest.mark.asyncio
 async def test_authorize_or_raise_uses_403_for_denied_authenticated_user():
     service = AuthorizationService()
+    attach_audit_recorder(service)
     service._AuthorizationService__project_member_repository = SimpleNamespace(
         find_by_project_and_user=AsyncMock(return_value=None)
     )

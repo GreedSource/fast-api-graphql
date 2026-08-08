@@ -5,6 +5,7 @@ from server.decorators.singleton_decorator import singleton
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
 from server.repositories.project_member_repository import ProjectMemberRepository
+from server.services.audit_log_service import AuditLogService
 from server.utils.permission_utils import has_permission
 
 
@@ -19,8 +20,21 @@ class AuthorizationResult:
 class AuthorizationService:
     def __init__(self):
         self.__project_member_repository = ProjectMemberRepository()
+        self.__audit_log_service = AuditLogService()
 
     async def authorize(
+        self,
+        user: dict | None,
+        module: str,
+        action: str,
+        resource: Any = None,
+        context: dict | None = None,
+    ) -> AuthorizationResult:
+        result = await self._evaluate(user, module, action, resource=resource, context=context)
+        await self._record_authorization(user, module, action, result, resource=resource, context=context)
+        return result
+
+    async def _evaluate(
         self,
         user: dict | None,
         module: str,
@@ -107,3 +121,39 @@ class AuthorizationService:
             resource.get("assigneeId") if isinstance(resource, dict) else getattr(resource, "assignee_id", None)
         )
         return str(assignee_id) == str(user.get("id"))
+
+    async def _record_authorization(
+        self,
+        user: dict | None,
+        module: str,
+        action: str,
+        result: AuthorizationResult,
+        resource: Any = None,
+        context: dict | None = None,
+    ) -> None:
+        await self.__audit_log_service.record(
+            user_id=user.get("id") if user else None,
+            module=module,
+            action=action,
+            resource_type=self._resolve_resource_type(module, resource),
+            resource_id=self._resolve_resource_id(resource, context),
+            status="success" if result.allowed else "denied",
+            metadata={"reason": result.reason},
+            strict=False,
+        )
+
+    def _resolve_resource_type(self, module: str, resource: Any = None) -> str | None:
+        if resource is None:
+            return None
+        if module.endswith("s"):
+            return module[:-1]
+        return module
+
+    def _resolve_resource_id(self, resource: Any = None, context: dict | None = None) -> str | None:
+        if resource is None:
+            return str(context["project_id"]) if context and context.get("project_id") else None
+        if isinstance(resource, dict):
+            resource_id = resource.get("id") or resource.get("resourceId") or resource.get("resource_id")
+        else:
+            resource_id = getattr(resource, "id", None)
+        return str(resource_id) if resource_id else None

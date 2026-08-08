@@ -47,6 +47,12 @@ async def _run_seed_project_roles():
     await seed_project_roles()
 
 
+async def _run_seed_demo():
+    from server.seeders import seed_demo
+
+    await seed_demo()
+
+
 async def _run_seed_all():
     if not settings.RUN_SEEDERS:
         LoggerHelper.info("RUN_SEEDERS=false, semilla global omitida.")
@@ -97,6 +103,7 @@ def main():
             "seed-permissions",
             "seed-roles",
             "seed-project-roles",
+            "seed-demo",
             "seed-users",
             "seed-all",
             "status",
@@ -120,6 +127,8 @@ def main():
         asyncio.run(_run_seed_roles())
     elif args.command == "seed-project-roles":
         asyncio.run(_run_seed_project_roles())
+    elif args.command == "seed-demo":
+        asyncio.run(_run_seed_demo())
     elif args.command == "seed-users":
         asyncio.run(_run_seed_users())
     elif args.command == "seed-all":
