@@ -4,6 +4,7 @@ import pytest
 
 from server.decorators.require_permission_decorator import PermissionCheckMode, require_permission, require_permissions
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
+from tests.factories import make_current_user
 
 
 class ResolverTarget:
@@ -28,7 +29,16 @@ def make_info(current_user=None):
 
 @pytest.mark.asyncio
 async def test_require_permission_allows_user_with_matching_permission():
-    current_user = {"role": {"permissions": [{"type": "users", "action": "read"}]}}
+    current_user = make_current_user(permissions=[{"type": "users", "action": "read"}])
+
+    result = await ResolverTarget().read_users(None, make_info(current_user))
+
+    assert result == {"ok": True}
+
+
+@pytest.mark.asyncio
+async def test_require_permission_accepts_module_action_permission_keys():
+    current_user = make_current_user(permissions=["users.read"])
 
     result = await ResolverTarget().read_users(None, make_info(current_user))
 
@@ -46,7 +56,7 @@ async def test_require_permission_rejects_unauthenticated_user():
 
 @pytest.mark.asyncio
 async def test_require_permissions_all_mode_requires_every_permission():
-    current_user = {"role": {"permissions": [{"type": "users", "action": "read"}]}}
+    current_user = make_current_user(permissions=[{"type": "users", "action": "read"}])
 
     with pytest.raises(CustomGraphQLExceptionHelper) as exc_info:
         await ResolverTarget().manage_users_and_roles(None, make_info(current_user))

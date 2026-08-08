@@ -4,6 +4,7 @@ from typing import List, Union
 
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
+from server.utils.permission_utils import has_permission, permission_set
 
 
 class PermissionCheckMode(str, Enum):
@@ -45,9 +46,7 @@ def require_permission(type: str, action: str):
 
             permissions = role.get("permissions", [])
 
-            has_permission = any(perm.get("type") == type and perm.get("action") == action for perm in permissions)
-
-            if not has_permission:
+            if not has_permission(permissions, type, action):
                 raise CustomGraphQLExceptionHelper(
                     f"Permiso denegado: se requiere {type}:{action}",
                     HTTPErrorCode.FORBIDDEN,
@@ -106,9 +105,9 @@ def require_permissions(
                 )
 
             user_permissions = role.get("permissions", [])
-            user_perm_set = {(p.get("type"), p.get("action")) for p in user_permissions}
+            user_perm_set = permission_set(user_permissions)
 
-            required_perm_set = {(p["type"], p["action"]) for p in permissions}
+            required_perm_set = permission_set(permissions)
 
             if mode == PermissionCheckMode.ANY:
                 has_permission = bool(required_perm_set & user_perm_set)
