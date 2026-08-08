@@ -38,25 +38,29 @@ class CreateActionModel(BaseModel):
         ...,
         min_length=1,
         max_length=100,
-        strip_whitespace=True,
         description="Nombre visible de la acción",
     )
     key: str = Field(
         ...,
         min_length=1,
         max_length=50,
-        strip_whitespace=True,
         description="Identificador de la acción (ej: create, read, update, delete)",
     )
     description: Optional[str] = Field(
         default=None,
         max_length=255,
-        strip_whitespace=True,
         description="Descripción de la acción",
     )
     active: bool = Field(default=True, description="Indica si la acción está activa")
 
+    @field_validator("name", "key", "description", mode="before")
+    @classmethod
+    def strip_strings(cls, v: Optional[str]) -> Optional[str]:
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
     @field_validator("key")
     @classmethod
     def normalize_key(cls, v: str) -> str:
-        return v.lower().strip()
+        return v.lower()

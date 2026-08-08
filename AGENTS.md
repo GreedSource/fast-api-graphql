@@ -191,12 +191,30 @@ Nota importante:
 - Si cambias autenticación/cookies, revisa middlewares, decorators y utils relacionados
 - Si cambias correo, revisa `MailHelper`, `TemplateHelper` y templates HTML
 
+## Regla Obligatoria de Pruebas Unitarias
+
+- Todo cambio que cree o modifique lógica ejecutable debe crear o actualizar pruebas unitarias en el mismo cambio
+- Esta regla aplica a servicios, repositorios, utils, helpers, decoradores, DTOs, resolvers, middlewares, seeders y cualquier archivo nuevo que contenga lógica de negocio, validación, autorización, serialización o efectos laterales
+- Como mínimo, las pruebas deben cubrir el caso exitoso principal y al menos un caso negativo relevante
+- Si el cambio toca autenticación o autorización, debe cubrir explícitamente errores `401 Unauthorized` y/o `403 Forbidden` cuando aplique
+- Si el cambio toca persistencia, debe probar el comportamiento del repositorio o servicio con mocks/fakes cuando no sea viable usar PostgreSQL real
+- Si el cambio toca GraphQL, debe probar que el resolver delega correctamente al servicio y que aplica los decoradores/permisos esperados
+- No se considera terminada una feature nueva sin sus pruebas unitarias correspondientes
+
+## Regla Obligatoria de Commits
+
+- Los commits deben tener mensajes descriptivos y contextualizados para que cualquier persona pueda entender el impacto del cambio sin abrir inmediatamente el diff
+- Evita mensajes genéricos como `fix`, `update`, `changes` o textos que solo digan que "se actualizó algo"
+- El título del commit debe resumir el propósito del cambio y el cuerpo debe explicar qué se modificó, por qué se hizo y qué validaciones se ejecutaron cuando aplique
+- Si el commit incluye cambios de arquitectura, migraciones, autorización, autenticación, pruebas o configuración, el mensaje debe mencionarlo explícitamente
+
 ## Verificación Mínima
 
 Después de cambios relevantes, intenta validar al menos:
 
 ```bash
 ruff check .
+python -m pytest
 python manage.py status
 ```
 

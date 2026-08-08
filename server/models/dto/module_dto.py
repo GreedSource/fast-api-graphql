@@ -38,40 +38,51 @@ class CreateModuleModel(BaseModel):
         ...,
         min_length=1,
         max_length=100,
-        strip_whitespace=True,
         description="Nombre visible del módulo",
     )
     key: str = Field(
         ...,
         min_length=1,
         max_length=50,
-        strip_whitespace=True,
         description="Identificador único del módulo (ej: users, roles)",
     )
     description: Optional[str] = Field(
         default=None,
         max_length=255,
-        strip_whitespace=True,
         description="Descripción del módulo",
     )
     active: bool = Field(default=True, description="Indica si el módulo está activo")
 
+    @field_validator("name", "key", "description", mode="before")
+    @classmethod
+    def strip_strings(cls, v: Optional[str]) -> Optional[str]:
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
     @field_validator("key")
     @classmethod
     def normalize_key(cls, v: str) -> str:
-        return v.lower().strip()
+        return v.lower()
 
 
 class UpdateModuleModel(BaseModel):
     id: uuid.UUID = Field(..., description="ID del módulo")
-    name: Optional[str] = Field(default=None, min_length=1, max_length=100, strip_whitespace=True)
-    key: Optional[str] = Field(default=None, min_length=1, max_length=50, strip_whitespace=True)
-    description: Optional[str] = Field(default=None, max_length=255, strip_whitespace=True)
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    key: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    description: Optional[str] = Field(default=None, max_length=255)
     active: Optional[bool] = Field(default=None)
+
+    @field_validator("name", "key", "description", mode="before")
+    @classmethod
+    def strip_strings(cls, v: Optional[str]) -> Optional[str]:
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
     @field_validator("key")
     @classmethod
     def normalize_key(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        return v.lower().strip()
+        return v.lower()

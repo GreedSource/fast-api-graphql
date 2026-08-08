@@ -1,8 +1,8 @@
 # Documentación de Cambio: 001_analisis_migracion_postgresql_sqlalchemy_20260806222244
 
-**Fecha / Timestamp**: 2026-08-06 22:22:44 (-06:00)  
-**Autor**: Antigravity Assistant  
-**Tipo**: Análisis y Plan de Arquitectura  
+**Fecha / Timestamp**: 2026-08-06 22:22:44 (-06:00)
+**Autor**: Antigravity Assistant
+**Tipo**: Análisis y Plan de Arquitectura
 
 ---
 
