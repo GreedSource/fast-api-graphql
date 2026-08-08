@@ -1,0 +1,65 @@
+type Task {
+  id: ID!
+  projectId: ID!
+  title: String!
+  description: String
+  status: String!
+  priority: String!
+  assigneeId: ID
+  createdById: ID
+  dueDate: DateTime
+  completedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input CreateTaskInput {
+  projectId: ID!
+  title: String!
+  description: String
+  priority: String = "medium"
+  assigneeId: ID
+  createdById: ID
+  dueDate: DateTime
+}
+
+input UpdateTaskInput {
+  id: ID!
+  title: String
+  description: String
+  status: String
+  priority: String
+  assigneeId: ID
+  dueDate: DateTime
+}
+
+type TaskResponse {
+  status: Int!
+  message: String
+  data: Task
+}
+
+type TaskListResponse {
+  status: Int!
+  message: String
+  data: [Task!]!
+}
+
+type TaskBooleanResponse {
+  status: Int!
+  message: String
+  data: Boolean
+}
+
+extend type Query {
+  tasks(projectId: ID): TaskListResponse!
+  task(id: ID!): TaskResponse!
+}
+
+extend type Mutation {
+  createTask(input: CreateTaskInput!): TaskResponse!
+  updateTask(input: UpdateTaskInput!): TaskResponse!
+  assignTask(id: ID!, assigneeId: ID!): TaskResponse!
+  completeTask(id: ID!): TaskResponse!
+  deleteTask(id: ID!): TaskBooleanResponse!
+}

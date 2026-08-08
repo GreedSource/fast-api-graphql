@@ -1,0 +1,54 @@
+type Project {
+  id: ID!
+  name: String!
+  description: String
+  status: String!
+  ownerId: ID
+  archivedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input CreateProjectInput {
+  name: String!
+  description: String
+  ownerId: ID
+}
+
+input UpdateProjectInput {
+  id: ID!
+  name: String
+  description: String
+  status: String
+  ownerId: ID
+}
+
+type ProjectResponse {
+  status: Int!
+  message: String
+  data: Project
+}
+
+type ProjectListResponse {
+  status: Int!
+  message: String
+  data: [Project!]!
+}
+
+type ProjectBooleanResponse {
+  status: Int!
+  message: String
+  data: Boolean
+}
+
+extend type Query {
+  projects(includeArchived: Boolean = false): ProjectListResponse!
+  project(id: ID!): ProjectResponse!
+}
+
+extend type Mutation {
+  createProject(input: CreateProjectInput!): ProjectResponse!
+  updateProject(input: UpdateProjectInput!): ProjectResponse!
+  archiveProject(id: ID!): ProjectResponse!
+  deleteProject(id: ID!): ProjectBooleanResponse!
+}
