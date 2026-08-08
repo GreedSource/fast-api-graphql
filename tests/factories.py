@@ -54,3 +54,18 @@ def make_role(**overrides):
     }
     data.update(overrides)
     return SimpleNamespace(**data)
+
+
+def make_current_user(permissions=None, **overrides):
+    data = {
+        "id": "user-1",
+        "name": "Test",
+        "lastname": "User",
+        "email": "test@example.com",
+        "role": {
+            "name": "admin",
+            "permissions": permissions or [{"type": "users", "action": "read"}],
+        },
+    }
+    data.update(overrides)
+    return data
