@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import UUID
 
@@ -5,6 +6,9 @@ ACTION_ID = UUID("55555555-5555-5555-5555-555555555555")
 MODULE_ID = UUID("66666666-6666-6666-6666-666666666666")
 PERMISSION_ID = UUID("77777777-7777-7777-7777-777777777777")
 ROLE_ID = UUID("88888888-8888-8888-8888-888888888888")
+PROJECT_ID = UUID("99999999-9999-9999-9999-999999999999")
+TASK_ID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+USER_ID = UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 
 
 def make_action(**overrides):
@@ -69,3 +73,39 @@ def make_current_user(permissions=None, **overrides):
     }
     data.update(overrides)
     return data
+
+
+def make_project(**overrides):
+    now = datetime.now(timezone.utc)
+    data = {
+        "id": PROJECT_ID,
+        "name": "Apollo",
+        "description": "Project Apollo",
+        "status": "active",
+        "owner_id": USER_ID,
+        "archived_at": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+    data.update(overrides)
+    return SimpleNamespace(**data)
+
+
+def make_task(**overrides):
+    now = datetime.now(timezone.utc)
+    data = {
+        "id": TASK_ID,
+        "project_id": PROJECT_ID,
+        "title": "Build API",
+        "description": "Implement GraphQL API",
+        "status": "todo",
+        "priority": "medium",
+        "assignee_id": USER_ID,
+        "created_by_id": USER_ID,
+        "due_date": None,
+        "completed_at": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+    data.update(overrides)
+    return SimpleNamespace(**data)
