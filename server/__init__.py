@@ -12,16 +12,12 @@ from graphql import parse
 from graphql import subscribe as graphql_subscribe
 from starlette.background import BackgroundTasks
 
+from server.adapters.websocket_request_adapter import WebSocketRequestAdapter
+
 # Desactivar logs ruidosos de ariadne
 logging.getLogger("ariadne").setLevel(logging.CRITICAL)
 
 explorer_html = ExplorerGraphiQL().html(None)
-
-
-class WebSocketRequestAdapter:
-    def __init__(self, headers: dict[str, str], cookies: dict[str, str]):
-        self.headers = headers
-        self.cookies = cookies
 
 
 def _parse_ws_cookies(websocket: WebSocket) -> dict[str, str]:

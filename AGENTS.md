@@ -15,7 +15,8 @@ Esta guía orienta a cualquier agente de IA (como Antigravity, Cursor, Windsurf,
 - **Ruff** — Linter/Formatter (`line-length = 120`, target Python 3.12)
 - **PyJWT** & **bcrypt** — Autenticación y hashing de contraseñas
 - **Jinja2** — Templates HTML para correos
-- **Redis** — Opcional para caché/sesiones (`RedisHelper`)
+- **Redis** — Publicación/suscripción de eventos (`RedisHelper`); el servicio debe estar disponible para esos flujos
+- **Pytest** y **pytest-asyncio** — Pruebas unitarias async
 
 ## Comandos y Ejecución
 
@@ -26,6 +27,8 @@ docker-compose up -d --build
 ```
 Esto levanta `api`, `postgres` y `redis`. En el arranque de la API se ejecutan migraciones y seeders automáticamente.
 
+`seed-all` solo carga datos cuando `RUN_SEEDERS=true`; las migraciones se ejecutan siempre antes de iniciar Uvicorn.
+
 ### Desarrollo Local (Venv)
 
 ```bash
@@ -35,13 +38,14 @@ pip install -r requirements.txt
 cp .env.example .env
 python manage.py migrate
 python manage.py seed-all
-uvicorn app:app --host 0.0.0.0 --port 5000 --reload --ws websockets
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload --ws websockets
 ```
 
 ### Comandos de Linter
 
 ```bash
 ruff check .
+python -m pytest
 ```
 
 ## Endpoints HTTP / WebSocket
@@ -71,6 +75,16 @@ Capas principales:
 - `server/helpers/` y `server/utils/`: utilidades compartidas (logger, mail, redis, template)
 - `server/templates/`: templates HTML para correo/layouts
 - `server/decorators/`: decoradores para autenticación y autorización
+- `server/adapters/`: adaptación de transportes/proveedores a contratos internos
+- `server/strategies/`: políticas intercambiables y factories para seleccionarlas
+- `server/observers/`: eventos y observers async de aplicación/infraestructura
+- `tests/`: pruebas unitarias
+- `docs/`: análisis, contratos y guías de evolución
+
+Dominios GraphQL registrados actualmente:
+
+- `hello`, `auth`, `users`, `roles`, `modules`, `actions`, `permission`
+- `projects`, `project_members`, `tasks`, `audit_logs`
 
 ## Cómo Extender Funcionalidad
 
@@ -92,6 +106,31 @@ Regla de diseño:
 - `services`: concentra reglas de negocio
 - `repositories`: encapsula consultas a PostgreSQL mediante SQLAlchemy
 - Evita meter lógica compleja directamente en resolvers
+- Todo dominio con lógica ejecutable debe incluir pruebas unitarias en el mismo cambio
+
+## Patrones de Diseño
+
+Patrones implementados y responsabilidades:
+
+| Patrón | Ubicación | Uso |
+|--------|-----------|-----|
+| Singleton | `server/decorators/singleton_decorator.py` | Reutiliza helpers, servicios y repositorios dentro de un proceso. |
+| Strategy | `server/strategies/permission_check_strategy.py` | Encapsula evaluación `ANY`/`ALL` de permisos. |
+| Factory | `PermissionCheckStrategyFactory` | Selecciona estrategias mediante `PermissionCheckMode`. |
+| Observer | `server/observers/` | Publica `UserUpdatedEvent` sin acoplar `UserService` a cada consumidor. |
+| Adapter | `server/adapters/websocket_request_adapter.py` | Adapta WebSocket al contrato de headers/cookies usado por autenticación. |
+| Decorator | `server/decorators/require_*` | Aplica autenticación y autorización como concerns transversales. |
+
+Reglas al extenderlos:
+
+- Usa Strategy cuando una política tenga variantes reales; agrega la estrategia a la factory y cubre cada resultado.
+- Usa Observer para reacciones independientes a eventos. Define si los errores se propagan, registran o aíslan antes de añadir observers no críticos.
+- Usa Adapter para aislar transportes o SDKs externos; el contrato interno no debe depender del proveedor.
+- Limita Decorator a concerns transversales. La lógica de negocio permanece en servicios.
+- Singleton representa una instancia por proceso, no estado distribuido entre workers. Nunca almacenes estado de request allí.
+- No introduzcas un patrón solo por uniformidad; documenta la integración futura cuando aún no exista una variación o consumidor real.
+
+La explicación ampliada y los puntos de evolución están en `docs/011_patrones_diseno_aplicados_y_evolucion_20260809120000.md`.
 
 ## Autenticación y Autorización
 
@@ -148,8 +187,10 @@ Comandos administrativos disponibles en `manage.py`:
 | `python manage.py seed-actions` | Siembra acciones base |
 | `python manage.py seed-permissions` | Genera matriz de permisos (módulos x acciones) |
 | `python manage.py seed-roles` | Siembra roles base |
+| `python manage.py seed-project-roles` | Siembra roles y permisos por proyecto |
+| `python manage.py seed-demo` | Siembra escenarios demo de proyectos, miembros y tareas |
 | `python manage.py seed-users` | Siembra usuarios iniciales |
-| `python manage.py seed-all` | Ejecuta migraciones y todos los seeders |
+| `python manage.py seed-all` | Ejecuta todos los seeders si `RUN_SEEDERS=true`; no ejecuta migraciones |
 | `python manage.py status` | Muestra el estado de migraciones aplicadas |
 
 Antes de asumir que una tabla, relación o índice existe, revisa las migraciones y agrega una migración si el cambio modifica estructura, validaciones o índices.
@@ -178,7 +219,8 @@ Variables relevantes que el código espera:
 - `RUN_SEEDERS`
 
 Nota importante:
-- `readme.md` y `.env.example` no están totalmente alineados con `settings.py`
+- `PORT` se usa en Docker Compose/Uvicorn, pero no pertenece a `Settings`
+- `.env.example` puede quedar desactualizado; valida siempre contra `settings.py`
 - Antes de editar configuración, valida nombres reales en `server/config/settings.py`
 - No renombres variables de entorno sin revisar uso en auth, cookies, mail y Docker Compose
 
@@ -190,6 +232,9 @@ Nota importante:
 - Si agregas errores de negocio, revisa `server/enums/http_error_code_enum.py` y el formatter custom
 - Si cambias autenticación/cookies, revisa middlewares, decorators y utils relacionados
 - Si cambias correo, revisa `MailHelper`, `TemplateHelper` y templates HTML
+- Si cambias eventos de usuario, revisa `AsyncEventPublisher`, sus observers y el canal Redis consumido por suscripciones
+- Si cambias políticas múltiples de permisos, revisa Strategy, Factory, decorators y pruebas 401/403
+- Preserva cambios preexistentes y archivos no rastreados que no pertenezcan a la tarea
 
 ## Regla Obligatoria de Pruebas Unitarias
 
@@ -216,6 +261,7 @@ Después de cambios relevantes, intenta validar al menos:
 ruff check .
 python -m pytest
 python manage.py status
+git diff --check
 ```
 
 Si el cambio toca GraphQL o persistencia, además valida manualmente:
@@ -228,5 +274,5 @@ Si el cambio toca GraphQL o persistencia, además valida manualmente:
 
 - Prioriza corregir la fuente real del problema en lugar de parchear el resolver
 - Si una nueva feature necesita datos persistidos, no omitas migración/seeder cuando aplique
-- Documenta inconsistencias del repo al encontrarlas; varias ya existen entre README, `.env.example` y `settings.py`
+- Documenta cualquier inconsistencia encontrada entre README, `.env.example`, Docker Compose y `settings.py`
 - No introduzcas nuevas capas o patrones si la necesidad puede resolverse con la estructura actual

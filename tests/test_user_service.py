@@ -35,11 +35,13 @@ async def test_update_user_validates_role_updates_and_publishes_payload():
     )
     role_service = SimpleNamespace(get_role=AsyncMock(return_value={"id": str(ROLE_ID)}))
     redis = SimpleNamespace(publish_json=AsyncMock())
+    publisher = SimpleNamespace(notify=AsyncMock())
 
     service = UserService()
     service._UserService__repository = repository
     service._UserService__role_service = role_service
     service._UserService__redis = redis
+    service._UserService__event_publisher = publisher
 
     result = await service.update_user(str(USER_ID), {"name": "Grace B.", "role_id": str(ROLE_ID)})
 
@@ -47,7 +49,10 @@ async def test_update_user_validates_role_updates_and_publishes_payload():
     assert result["role"]["id"] == str(ROLE_ID)
     role_service.get_role.assert_awaited_once_with(str(ROLE_ID))
     repository.update.assert_awaited_once_with(str(USER_ID), {"name": "Grace B.", "role_id": str(ROLE_ID)})
-    redis.publish_json.assert_awaited_once_with(f"user_updated:{USER_ID}", result)
+    publisher.notify.assert_awaited_once()
+    event = publisher.notify.await_args.args[0]
+    assert event.user_id == str(USER_ID)
+    assert event.payload == result
 
 
 @pytest.mark.asyncio

@@ -1,17 +1,10 @@
-from enum import Enum
 from functools import wraps
 from typing import List, Union
 
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
-from server.utils.permission_utils import has_permission, permission_set
-
-
-class PermissionCheckMode(str, Enum):
-    """Modos de verificación de permisos"""
-
-    ANY = "any"  # Basta con tener uno de los permisos
-    ALL = "all"  # Debe tener todos los permisos
+from server.strategies.permission_check_strategy import PermissionCheckMode, PermissionCheckStrategyFactory
+from server.utils.permission_utils import has_permission
 
 
 def require_permission(type: str, action: str):
@@ -83,8 +76,8 @@ def require_permissions(
             ...
     """
 
-    if isinstance(mode, str):
-        mode = PermissionCheckMode(mode)
+    strategy = PermissionCheckStrategyFactory.create(mode)
+    normalized_mode = PermissionCheckMode(mode)
 
     def decorator(resolver):
         @wraps(resolver)
@@ -105,18 +98,14 @@ def require_permissions(
                 )
 
             user_permissions = role.get("permissions", [])
-            user_perm_set = permission_set(user_permissions)
+            is_allowed = strategy.is_allowed(user_permissions, permissions)
 
-            required_perm_set = permission_set(permissions)
-
-            if mode == PermissionCheckMode.ANY:
-                has_permission = bool(required_perm_set & user_perm_set)
+            if normalized_mode == PermissionCheckMode.ANY:
                 perm_description = " o ".join([f"{p['type']}:{p['action']}" for p in permissions])
-            else:  # ALL
-                has_permission = required_perm_set.issubset(user_perm_set)
+            else:
                 perm_description = " y ".join([f"{p['type']}:{p['action']}" for p in permissions])
 
-            if not has_permission:
+            if not is_allowed:
                 raise CustomGraphQLExceptionHelper(
                     f"Permiso denegado: se requiere {perm_description}",
                     HTTPErrorCode.FORBIDDEN,

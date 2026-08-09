@@ -1,6 +1,6 @@
 # FastAPI GraphQL API
 
-API backend construida con `FastAPI`, `Ariadne` y `PostgreSQL`, orientada a autenticación JWT, control de acceso por roles (RBAC) y administración de usuarios, roles, módulos, acciones y permisos.
+API backend construida con `FastAPI`, `Ariadne` y `PostgreSQL`, orientada a autenticación JWT, RBAC global y por proyecto, administración de usuarios y gestión de proyectos, miembros, tareas y auditoría.
 
 ## Características
 
@@ -8,9 +8,14 @@ API backend construida con `FastAPI`, `Ariadne` y `PostgreSQL`, orientada a aute
 - Soporte HTTP y WebSocket para GraphQL
 - Autenticación con JWT
 - RBAC con roles, permisos, módulos y acciones
+- Autorización contextual por proyecto y rol de proyecto
+- Gestión de proyectos, miembros, tareas y logs de auditoría
 - Persistencia async con `SQLAlchemy 2.0` y `asyncpg`
+- Redis para eventos de actualización y suscripciones
 - Migraciones y seeders para PostgreSQL
 - Plantillas HTML para correo
+- Patrones de diseño aplicados a concerns transversales e infraestructura
+- Pruebas unitarias con `pytest` y `pytest-asyncio`
 - Contenedorización con Docker Compose
 - Linting con `ruff`
 
@@ -20,8 +25,12 @@ API backend construida con `FastAPI`, `Ariadne` y `PostgreSQL`, orientada a aute
 - FastAPI
 - Ariadne
 - PostgreSQL + SQLAlchemy async
+- Redis
 - Pydantic Settings
 - Uvicorn
+- PyJWT + bcrypt
+- Jinja2
+- Pytest
 - Ruff
 
 ## Estructura del proyecto
@@ -37,6 +46,7 @@ fast-api-graphql/
 ├── .env.example
 └── server/
     ├── __init__.py
+    ├── adapters/
     ├── config/
     ├── constants/
     ├── core/
@@ -46,9 +56,11 @@ fast-api-graphql/
     ├── helpers/
     ├── middlewares/
     ├── models/
+    ├── observers/
     ├── repositories/
     ├── schema/
     ├── services/
+    ├── strategies/
     ├── templates/
     └── utils/
 ```
@@ -62,6 +74,12 @@ Capas principales:
 - `server/db/`: conexión y sesión async
 - `server/migrations/`: migraciones DDL versionadas con tabla `schema_migrations`
 - `server/seeders/`: datos base
+- `server/adapters/`: adaptación de transportes o proveedores externos a contratos internos
+- `server/strategies/`: políticas intercambiables de negocio/autorización
+- `server/observers/`: eventos de dominio y observers de infraestructura
+- `server/decorators/`: autenticación, autorización y ciclo de vida Singleton
+- `tests/`: pruebas unitarias de servicios, repositorios, resolvers, DTOs, seguridad y patrones
+- `docs/`: análisis y documentación de evolución del proyecto
 
 ## Requisitos
 
@@ -74,6 +92,7 @@ Capas principales:
 
 - Python 3.12
 - PostgreSQL
+- Redis, requerido para publicación/suscripción de eventos de usuario
 
 ## Configuración
 
@@ -107,6 +126,7 @@ POSTGRES_PORT=5432
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=graphqlapp
+REDIS_URL=redis://redis:6379/0
 RUN_SEEDERS=true
 
 MAIL_SERVER=smtp.gmail.com
@@ -124,8 +144,11 @@ CORS_ORIGINS=http://localhost:5000,http://localhost:5173,http://127.0.0.1:5173,h
 Notas:
 
 - `CORS_ORIGINS` se parsea como una cadena separada por comas
-- `RUN_SEEDERS=true` permite que `seed-all` ejecute seeders
+- `PORT` lo consume Docker Compose/Uvicorn; no forma parte de `Settings`
+- `RUN_SEEDERS=true` permite que `seed-all` ejecute los seeders; las migraciones se ejecutan independientemente
 - en Docker Compose el contenedor usa `POSTGRES_SERVER=postgres`
+- en desarrollo local normalmente se usan `POSTGRES_SERVER=localhost` y `REDIS_URL=redis://localhost:6379/0`
+- nunca publiques `.env`; usa `.env.example` como plantilla sin secretos reales
 
 ## Ejecutar con Docker Compose
 
@@ -145,7 +168,7 @@ El servicio `api` ejecuta al iniciar:
 
 ```bash
 python manage.py migrate
-python manage.py seed-all
+python manage.py seed-all  # se omite internamente si RUN_SEEDERS=false
 uvicorn app:app --host 0.0.0.0 --port $PORT --reload --ws websockets --proxy-headers
 ```
 
@@ -178,7 +201,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Asegúrate de tener PostgreSQL disponible y configura `.env`
+3. Asegúrate de tener PostgreSQL y Redis disponibles y configura `.env`
 
 Ejemplo local:
 
@@ -188,6 +211,7 @@ POSTGRES_PORT=5432
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=graphqlapp
+REDIS_URL=redis://localhost:6379/0
 ```
 
 4. Corre migraciones:
@@ -217,6 +241,8 @@ uvicorn app:app --host 0.0.0.0 --port 8000 --reload --ws websockets
 - `python manage.py seed-actions`
 - `python manage.py seed-permissions`
 - `python manage.py seed-roles`
+- `python manage.py seed-project-roles`
+- `python manage.py seed-demo`
 - `python manage.py seed-users`
 - `python manage.py seed-all`
 - `python manage.py status`
@@ -228,8 +254,10 @@ Qué hace cada uno:
 - `seed-actions`: crea acciones base
 - `seed-permissions`: genera permisos a partir de módulos y acciones
 - `seed-roles`: crea roles base
+- `seed-project-roles`: crea roles y permisos propios de proyecto
+- `seed-demo`: crea escenarios demostrativos de proyectos, miembros y tareas
 - `seed-users`: crea usuarios base
-- `seed-all`: corre migraciones y seeders
+- `seed-all`: ejecuta todos los seeders si `RUN_SEEDERS=true`; no sustituye a `migrate`
 - `status`: muestra migraciones aplicadas
 
 ## Endpoints disponibles
@@ -247,16 +275,28 @@ También existe soporte WebSocket en:
 
 ## Desarrollo
 
-Lint:
+Validación recomendada:
 
 ```bash
 ruff check .
+python -m pytest
+python manage.py status
 ```
+
+`manage.py status` necesita una instancia PostgreSQL accesible. Para cambios GraphQL o de persistencia valida también
+`GET /ping`, `GET /graphql`, la operación afectada y las migraciones/seeders involucrados.
 
 Formato/estilo actual:
 
 - `ruff.toml` usa `line-length = 120`
 - `target-version = "py312"`
+
+El repositorio también incluye hooks de `pre-commit` para Ruff, validaciones de archivos, detección de secretos y pytest:
+
+```bash
+pre-commit install
+pre-commit run --all-files
+```
 
 ## Arquitectura de GraphQL
 
@@ -269,6 +309,10 @@ El esquema se compone cargando todos los archivos `.graphql` desde `server/schem
 - `modules`
 - `actions`
 - `permission`
+- `projects`
+- `project_members`
+- `tasks`
+- `audit_logs`
 
 Cuando agregues un nuevo dominio:
 
@@ -276,6 +320,73 @@ Cuando agregues un nuevo dominio:
 2. implementa su resolver
 3. regístralo en `server/schema/__init__.py`
 4. añade servicio/repositorio/migración si aplica
+5. crea o actualiza pruebas unitarias para el caso exitoso y al menos un caso negativo relevante
+
+Regla de capas:
+
+- El resolver recibe la operación GraphQL y delega.
+- El servicio concentra reglas de negocio.
+- El repositorio encapsula SQLAlchemy/PostgreSQL.
+- Los cambios de estructura, restricciones o índices requieren una migración versionada.
+
+## Autenticación y autorización
+
+- `@require_token` valida JWT desde `Authorization: Bearer` o cookies e inyecta `current_user`.
+- `@require_permission(type, action)` exige un permiso global concreto.
+- `@require_permissions(permissions, mode)` combina permisos mediante `PermissionCheckMode.ANY` o `.ALL`.
+- `AuthorizationService` aplica autorización contextual sobre proyectos, membresías, roles de proyecto y ownership de tareas.
+- Los rechazos de autenticación/autorización se expresan como errores GraphQL con códigos HTTP `401` o `403`.
+
+Ejemplo:
+
+```python
+from server.decorators.require_permission_decorator import PermissionCheckMode, require_permissions
+from server.decorators.require_token_decorator import require_token
+
+
+@require_token
+@require_permissions(
+    permissions=[
+        {"type": "users", "action": "read"},
+        {"type": "roles", "action": "read"},
+    ],
+    mode=PermissionCheckMode.ALL,
+)
+async def resolve_admin_view(self, parent, info):
+    ...
+```
+
+## Patrones de diseño
+
+Los patrones se usan únicamente donde reducen acoplamiento o aíslan una política que puede variar:
+
+| Patrón | Ubicación | Uso actual |
+|---|---|---|
+| Singleton | `server/decorators/singleton_decorator.py` | Una instancia por proceso para helpers, repositorios y servicios compartidos. |
+| Strategy | `server/strategies/permission_check_strategy.py` | Políticas `ANY` y `ALL` para combinar permisos. |
+| Factory | `PermissionCheckStrategyFactory` | Construye la estrategia correspondiente a `PermissionCheckMode`. |
+| Observer | `server/observers/` | Desacopla `UserService` de la publicación del evento `UserUpdatedEvent`. |
+| Adapter | `server/adapters/websocket_request_adapter.py` | Expone headers/cookies de WebSocket con el contrato esperado por autenticación. |
+| Decorator | `server/decorators/require_*` | Aplica autenticación y RBAC sin mezclar esas reglas con resolvers. |
+
+Para agregar un modo de permisos, implementa `PermissionCheckStrategy`, registra la clase en
+`PermissionCheckStrategyFactory` y añade pruebas de aceptación/rechazo. Para reaccionar a una actualización de usuario,
+implementa un observer async con `update(event)` y adjúntalo al publisher; define explícitamente si sus fallos deben
+propagarse o aislarse.
+
+No uses Singleton para estado por request o compartido entre workers. No agregues factories, adapters u observers sin un
+contrato o una variación real. La guía completa está en
+`docs/011_patrones_diseno_aplicados_y_evolucion_20260809120000.md`.
+
+## Pruebas
+
+La suite cubre servicios, repositorios con mocks/fakes, resolvers, DTOs, autenticación, autorización, seeders y patrones:
+
+```bash
+python -m pytest
+```
+
+Toda modificación de lógica ejecutable debe incluir o actualizar pruebas para el flujo exitoso y al menos un caso negativo.
 
 ## Dockerfile
 
@@ -295,6 +406,7 @@ uvicorn app:app --host 0.0.0.0 --port 8000 --ws websockets --proxy-headers
 
 ## Estado actual
 
-- No se observan tests automatizados en el repositorio
-- `.env.example` ya está alineado con `settings.py`
-- algunas credenciales reales pueden existir en `.env`; no las copies al repositorio
+- El esquema incluye autenticación, catálogo RBAC, usuarios, proyectos, miembros, tareas y auditoría.
+- Existen migraciones versionadas y seeders administrados desde `manage.py`.
+- `.env.example` documenta la configuración principal, pero `server/config/settings.py` sigue siendo la fuente de verdad.
+- `.env` puede contener credenciales reales y no debe incorporarse al repositorio.
