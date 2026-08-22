@@ -1,0 +1,8 @@
+type Contact { id: ID!, organizationId: ID!, teamId: ID, ownerId: ID, companyId: ID, name: String!, lastname: String!, email: String, phone: String, position: String, status: String!, createdAt: DateTime!, updatedAt: DateTime! }
+input CreateContactInput { organizationId: ID!, teamId: ID, ownerId: ID, companyId: ID, name: String!, lastname: String!, email: String, phone: String, position: String }
+input UpdateContactInput { id: ID!, teamId: ID, ownerId: ID, companyId: ID, name: String, lastname: String, email: String, phone: String, position: String, status: String }
+type ContactResponse { status: Int!, message: String, data: Contact }
+type ContactListResponse { status: Int!, message: String, data: [Contact!]! }
+type ContactBooleanResponse { status: Int!, message: String, data: Boolean }
+extend type Query { contacts(organizationId: ID!): ContactListResponse!, contact(id: ID!): ContactResponse! }
+extend type Mutation { createContact(input: CreateContactInput!): ContactResponse!, updateContact(input: UpdateContactInput!): ContactResponse!, deleteContact(id: ID!): ContactBooleanResponse! }

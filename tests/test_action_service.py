@@ -12,7 +12,7 @@ from tests.factories import ACTION_ID, make_action
 async def test_action_service_create_serializes_created_action():
     repository = SimpleNamespace(create=AsyncMock(return_value=make_action()))
     service = ActionService()
-    service._ActionService__repository = repository
+    service.repository = repository
 
     result = await service.create(CreateActionModel(name=" Read ", key=" READ ", description=" Read records "))
 
@@ -37,7 +37,7 @@ async def test_action_service_create_serializes_created_action():
 async def test_action_service_get_all_serializes_list():
     repository = SimpleNamespace(find_all=AsyncMock(return_value=[make_action()]))
     service = ActionService()
-    service._ActionService__repository = repository
+    service.repository = repository
 
     result = await service.get_all()
 

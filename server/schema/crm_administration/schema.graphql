@@ -1,0 +1,13 @@
+type CRMOrganization { id: ID!, name: String!, slug: String! }
+type CRMTeam { id: ID!, organizationId: ID!, name: String!, description: String }
+type CRMTeamMember { id: ID!, teamId: ID!, userId: ID!, role: String!, scope: String! }
+type CRMOrganizationResponse { status: Int!, message: String, data: CRMOrganization }
+type CRMTeamResponse { status: Int!, message: String, data: CRMTeam }
+type CRMTeamListResponse { status: Int!, message: String, data: [CRMTeam!]! }
+type CRMTeamMemberResponse { status: Int!, message: String, data: CRMTeamMember }
+extend type Query { crmTeams(organizationId: ID!): CRMTeamListResponse! }
+extend type Mutation {
+  createCRMOrganization(name: String!, slug: String!): CRMOrganizationResponse!
+  createCRMTeam(organizationId: ID!, name: String!, description: String): CRMTeamResponse!
+  addCRMTeamMember(teamId: ID!, userId: ID!, role: String!, scope: String!): CRMTeamMemberResponse!
+}

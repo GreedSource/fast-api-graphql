@@ -13,7 +13,7 @@ from tests.factories import PROJECT_ID, USER_ID, make_project
 async def test_project_service_create_serializes_project():
     repository = SimpleNamespace(create=AsyncMock(return_value=make_project()))
     service = ProjectService()
-    service._ProjectService__repository = repository
+    service.repository = repository
 
     result = await service.create(CreateProjectModel(name="Apollo", ownerId=str(USER_ID)))
 
@@ -26,7 +26,7 @@ async def test_project_service_create_serializes_project():
 async def test_project_service_update_rejects_missing_project():
     repository = SimpleNamespace(update=AsyncMock(return_value=None))
     service = ProjectService()
-    service._ProjectService__repository = repository
+    service.repository = repository
 
     with pytest.raises(CustomGraphQLExceptionHelper) as exc_info:
         await service.update(UpdateProjectModel(id=PROJECT_ID, name="Apollo 2"))
@@ -39,7 +39,7 @@ async def test_project_service_update_rejects_missing_project():
 async def test_project_service_archive_serializes_archived_project():
     repository = SimpleNamespace(archive=AsyncMock(return_value=make_project(status="archived")))
     service = ProjectService()
-    service._ProjectService__repository = repository
+    service.repository = repository
 
     result = await service.archive(str(PROJECT_ID))
 

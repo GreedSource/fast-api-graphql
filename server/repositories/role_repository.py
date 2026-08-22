@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -9,22 +9,12 @@ from server.db.session import AsyncSessionLocal
 from server.decorators.singleton_decorator import singleton
 from server.models.orm.permission_orm import PermissionORM
 from server.models.orm.role_orm import RoleORM
+from server.repositories.base_repository import BaseRepository
 
 
 @singleton
-class RoleRepository:
-    async def create(self, role_data: dict, session: Optional[AsyncSession] = None) -> RoleORM:
-        role = RoleORM(**role_data)
-        if session:
-            session.add(role)
-            await session.commit()
-            await session.refresh(role)
-            return role
-        async with AsyncSessionLocal() as db_session:
-            db_session.add(role)
-            await db_session.commit()
-            await db_session.refresh(role)
-            return role
+class RoleRepository(BaseRepository[RoleORM]):
+    model = RoleORM
 
     async def find_by_id(self, role_id: str | uuid.UUID, session: Optional[AsyncSession] = None) -> Optional[RoleORM]:
         r_uuid = uuid.UUID(str(role_id)) if isinstance(role_id, str) else role_id
@@ -179,15 +169,3 @@ class RoleRepository:
             return await _update(session)
         async with AsyncSessionLocal() as db_session:
             return await _update(db_session)
-
-    async def delete(self, role_id: str | uuid.UUID, session: Optional[AsyncSession] = None) -> bool:
-        r_uuid = uuid.UUID(str(role_id)) if isinstance(role_id, str) else role_id
-        stmt = delete(RoleORM).where(RoleORM.id == r_uuid)
-        if session:
-            res = await session.execute(stmt)
-            await session.commit()
-            return res.rowcount > 0
-        async with AsyncSessionLocal() as db_session:
-            res = await db_session.execute(stmt)
-            await db_session.commit()
-            return res.rowcount > 0

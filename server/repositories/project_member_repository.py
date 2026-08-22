@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -10,22 +10,12 @@ from server.decorators.singleton_decorator import singleton
 from server.models.orm.permission_orm import PermissionORM
 from server.models.orm.project_member_orm import ProjectMemberORM
 from server.models.orm.project_role_orm import ProjectRoleORM
+from server.repositories.base_repository import BaseRepository
 
 
 @singleton
-class ProjectMemberRepository:
-    async def create(self, data: dict, session: Optional[AsyncSession] = None) -> ProjectMemberORM:
-        member = ProjectMemberORM(**data)
-        if session:
-            session.add(member)
-            await session.commit()
-            await session.refresh(member)
-            return member
-        async with AsyncSessionLocal() as db_session:
-            db_session.add(member)
-            await db_session.commit()
-            await db_session.refresh(member)
-            return member
+class ProjectMemberRepository(BaseRepository[ProjectMemberORM]):
+    model = ProjectMemberORM
 
     async def find_by_project_and_user(
         self,
@@ -119,22 +109,6 @@ class ProjectMemberRepository:
             await db_session.commit()
             await db_session.refresh(member)
             return member
-
-    async def delete(self, member_id: str | uuid.UUID, session: Optional[AsyncSession] = None) -> bool:
-        try:
-            m_uuid = uuid.UUID(str(member_id)) if isinstance(member_id, str) else member_id
-        except ValueError:
-            return False
-
-        stmt = delete(ProjectMemberORM).where(ProjectMemberORM.id == m_uuid)
-        if session:
-            res = await session.execute(stmt)
-            await session.commit()
-            return res.rowcount > 0
-        async with AsyncSessionLocal() as db_session:
-            res = await db_session.execute(stmt)
-            await db_session.commit()
-            return res.rowcount > 0
 
     async def find_project_role_by_id(
         self, project_role_id: str | uuid.UUID, session: Optional[AsyncSession] = None

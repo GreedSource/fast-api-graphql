@@ -1,0 +1,9 @@
+type Lead { id: ID!, organizationId: ID!, teamId: ID, ownerId: ID, companyId: ID, contactId: ID, name: String!, source: String, status: String!, score: Int!, archivedAt: DateTime, convertedAt: DateTime, createdAt: DateTime!, updatedAt: DateTime! }
+input CreateLeadInput { organizationId: ID!, teamId: ID, ownerId: ID, companyId: ID, contactId: ID, name: String!, source: String, status: String = "new", score: Int = 0 }
+input UpdateLeadInput { id: ID!, teamId: ID, ownerId: ID, companyId: ID, contactId: ID, name: String, source: String, status: String, score: Int }
+input ConvertLeadInput { id: ID!, opportunityName: String!, value: String = "0", probability: Int = 0, expectedCloseDate: DateTime }
+type LeadResponse { status: Int!, message: String, data: Lead }
+type LeadListResponse { status: Int!, message: String, data: [Lead!]! }
+type LeadBooleanResponse { status: Int!, message: String, data: Boolean }
+extend type Query { leads(organizationId: ID!): LeadListResponse!, lead(id: ID!): LeadResponse! }
+extend type Mutation { createLead(input: CreateLeadInput!): LeadResponse!, updateLead(input: UpdateLeadInput!): LeadResponse!, deleteLead(id: ID!): LeadBooleanResponse!, convertLead(input: ConvertLeadInput!): OpportunityResponse! }

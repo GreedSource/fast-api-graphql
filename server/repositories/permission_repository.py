@@ -1,17 +1,20 @@
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from server.db.session import AsyncSessionLocal
 from server.decorators.singleton_decorator import singleton
 from server.models.orm.permission_orm import PermissionORM
+from server.repositories.base_repository import BaseRepository
 
 
 @singleton
-class PermissionRepository:
+class PermissionRepository(BaseRepository[PermissionORM]):
+    model = PermissionORM
+
     async def create(self, data: dict, session: Optional[AsyncSession] = None) -> PermissionORM:
         module_id = uuid.UUID(str(data["module_id"])) if isinstance(data["module_id"], str) else data["module_id"]
         action_id = uuid.UUID(str(data["action_id"])) if isinstance(data["action_id"], str) else data["action_id"]
@@ -78,15 +81,3 @@ class PermissionRepository:
         async with AsyncSessionLocal() as db_session:
             res = await db_session.execute(stmt)
             return res.scalar_one_or_none()
-
-    async def delete(self, permission_id: str | uuid.UUID, session: Optional[AsyncSession] = None) -> bool:
-        perm_uuid = uuid.UUID(str(permission_id)) if isinstance(permission_id, str) else permission_id
-        stmt = delete(PermissionORM).where(PermissionORM.id == perm_uuid)
-        if session:
-            res = await session.execute(stmt)
-            await session.commit()
-            return res.rowcount > 0
-        async with AsyncSessionLocal() as db_session:
-            res = await db_session.execute(stmt)
-            await db_session.commit()
-            return res.rowcount > 0

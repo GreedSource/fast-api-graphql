@@ -1,0 +1,8 @@
+type Activity { id: ID!, organizationId: ID!, teamId: ID, ownerId: ID, companyId: ID, contactId: ID, leadId: ID, opportunityId: ID, activityType: String!, subject: String!, description: String, status: String!, scheduledAt: DateTime, completedAt: DateTime, createdAt: DateTime!, updatedAt: DateTime! }
+input CreateActivityInput { organizationId: ID!, teamId: ID, ownerId: ID, companyId: ID, contactId: ID, leadId: ID, opportunityId: ID, activityType: String!, subject: String!, description: String, scheduledAt: DateTime }
+input UpdateActivityInput { id: ID!, teamId: ID, ownerId: ID, activityType: String, subject: String, description: String, status: String, scheduledAt: DateTime }
+type ActivityResponse { status: Int!, message: String, data: Activity }
+type ActivityListResponse { status: Int!, message: String, data: [Activity!]! }
+type ActivityBooleanResponse { status: Int!, message: String, data: Boolean }
+extend type Query { activities(organizationId: ID!): ActivityListResponse!, activity(id: ID!): ActivityResponse! }
+extend type Mutation { createActivity(input: CreateActivityInput!): ActivityResponse!, updateActivity(input: UpdateActivityInput!): ActivityResponse!, deleteActivity(id: ID!): ActivityBooleanResponse! }

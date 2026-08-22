@@ -3,8 +3,15 @@ from pathlib import Path
 from ariadne import load_schema_from_path, make_executable_schema
 
 from server.schema.actions.action_resolver import ActionResolver
+from server.schema.activities.resolver import ActivityResolver
 from server.schema.audit_logs.resolver import AuditLogResolver
+from server.schema.companies.resolver import CompanyResolver
+from server.schema.contacts.resolver import ContactResolver
+from server.schema.crm_administration.resolver import CRMAdministrationResolver
+from server.schema.crm_dashboard.resolver import CRMDashboardResolver
+from server.schema.leads.resolver import LeadResolver
 from server.schema.modules.resolver import ModuleResolver
+from server.schema.opportunities.resolver import OpportunityResolver
 from server.schema.permission.resolver import PermissionResolver
 from server.schema.project_members.resolver import ProjectMemberResolver
 from server.schema.projects.resolver import ProjectResolver
@@ -26,6 +33,15 @@ __permission_resolver = PermissionResolver()
 __project_member_resolver = ProjectMemberResolver()
 __project_resolver = ProjectResolver()
 __task_resolver = TaskResolver()
+__crm_resolvers = [
+    CompanyResolver(),
+    ContactResolver(),
+    LeadResolver(),
+    OpportunityResolver(),
+    ActivityResolver(),
+    CRMAdministrationResolver(),
+    CRMDashboardResolver(),
+]
 schemas_path = Path(__file__).parent
 
 # Cargar todos los archivos .graphql
@@ -45,5 +61,7 @@ all_resolvers.extend(__permission_resolver.get_resolvers())
 all_resolvers.extend(__project_member_resolver.get_resolvers())
 all_resolvers.extend(__project_resolver.get_resolvers())
 all_resolvers.extend(__task_resolver.get_resolvers())
+for crm_resolver in __crm_resolvers:
+    all_resolvers.extend(crm_resolver.get_resolvers())
 
 schema = make_executable_schema(type_defs, *all_resolvers)

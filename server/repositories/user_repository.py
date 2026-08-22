@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -10,10 +10,13 @@ from server.decorators.singleton_decorator import singleton
 from server.models.orm.permission_orm import PermissionORM
 from server.models.orm.role_orm import RoleORM
 from server.models.orm.user_orm import UserORM
+from server.repositories.base_repository import BaseRepository
 
 
 @singleton
-class UserRepository:
+class UserRepository(BaseRepository[UserORM]):
+    model = UserORM
+
     async def create(self, user_data: dict, session: Optional[AsyncSession] = None) -> UserORM:
         data = dict(user_data)
         if "role_id" in data and isinstance(data["role_id"], str):
@@ -183,15 +186,3 @@ class UserRepository:
             await db_session.commit()
             await db_session.refresh(user)
             return user
-
-    async def delete(self, user_id: str | uuid.UUID, session: Optional[AsyncSession] = None) -> bool:
-        u_uuid = uuid.UUID(str(user_id)) if isinstance(user_id, str) else user_id
-        stmt = delete(UserORM).where(UserORM.id == u_uuid)
-        if session:
-            res = await session.execute(stmt)
-            await session.commit()
-            return res.rowcount > 0
-        async with AsyncSessionLocal() as db_session:
-            res = await db_session.execute(stmt)
-            await db_session.commit()
-            return res.rowcount > 0

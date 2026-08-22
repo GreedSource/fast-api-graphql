@@ -12,7 +12,7 @@ from tests.factories import MODULE_ID, make_module
 async def test_module_service_create_serializes_created_module():
     repository = SimpleNamespace(create=AsyncMock(return_value=make_module()))
     service = ModuleService()
-    service._ModuleService__repository = repository
+    service.repository = repository
 
     result = await service.create(CreateModuleModel(name=" Users ", key=" USERS ", description=" User management "))
 
@@ -37,7 +37,7 @@ async def test_module_service_create_serializes_created_module():
 async def test_module_service_update_returns_none_when_repository_misses():
     repository = SimpleNamespace(update=AsyncMock(return_value=None))
     service = ModuleService()
-    service._ModuleService__repository = repository
+    service.repository = repository
 
     result = await service.update(UpdateModuleModel(id=MODULE_ID, name="Users API"))
 
@@ -49,6 +49,6 @@ async def test_module_service_update_returns_none_when_repository_misses():
 async def test_module_service_get_one_returns_none_for_missing_module():
     repository = SimpleNamespace(find_by_id=AsyncMock(return_value=None))
     service = ModuleService()
-    service._ModuleService__repository = repository
+    service.repository = repository
 
     assert await service.get_one(str(MODULE_ID)) is None

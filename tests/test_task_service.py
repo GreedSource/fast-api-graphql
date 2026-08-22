@@ -12,7 +12,7 @@ from tests.factories import PROJECT_ID, TASK_ID, USER_ID, make_project, make_tas
 @pytest.mark.asyncio
 async def test_task_service_create_requires_existing_project():
     service = TaskService()
-    service._TaskService__project_repository = SimpleNamespace(find_by_id=AsyncMock(return_value=None))
+    service.project_repository = SimpleNamespace(find_by_id=AsyncMock(return_value=None))
 
     with pytest.raises(CustomGraphQLExceptionHelper) as exc_info:
         await service.create(CreateTaskModel(projectId=str(PROJECT_ID), title="Build API"))
@@ -25,8 +25,8 @@ async def test_task_service_create_serializes_task():
     repository = SimpleNamespace(create=AsyncMock(return_value=make_task()))
     project_repository = SimpleNamespace(find_by_id=AsyncMock(return_value=make_project()))
     service = TaskService()
-    service._TaskService__repository = repository
-    service._TaskService__project_repository = project_repository
+    service.repository = repository
+    service.project_repository = project_repository
 
     result = await service.create(
         CreateTaskModel(projectId=str(PROJECT_ID), title="Build API", assigneeId=str(USER_ID))
@@ -47,7 +47,7 @@ async def test_task_service_create_serializes_task():
 @pytest.mark.asyncio
 async def test_task_service_update_rejects_missing_task():
     service = TaskService()
-    service._TaskService__repository = SimpleNamespace(update=AsyncMock(return_value=None))
+    service.repository = SimpleNamespace(update=AsyncMock(return_value=None))
 
     with pytest.raises(CustomGraphQLExceptionHelper) as exc_info:
         await service.update(UpdateTaskModel(id=TASK_ID, title="New title"))
@@ -60,7 +60,7 @@ async def test_task_service_update_rejects_missing_task():
 async def test_task_service_complete_serializes_completed_task():
     repository = SimpleNamespace(complete=AsyncMock(return_value=make_task(status="done")))
     service = TaskService()
-    service._TaskService__repository = repository
+    service.repository = repository
 
     result = await service.complete(str(TASK_ID))
 

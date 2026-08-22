@@ -15,6 +15,11 @@ DEFAULT_MODULES = [
     {"name": "Reportes", "key": "reports", "description": "Consulta y exportación de reportes", "active": True},
     {"name": "Documentos", "key": "documents", "description": "Gestión de documentos", "active": True},
     {"name": "Actividad", "key": "activity", "description": "Consulta de actividad y auditoría", "active": True},
+    {"name": "Empresas CRM", "key": "companies", "description": "Gestión de empresas del CRM", "active": True},
+    {"name": "Contactos CRM", "key": "contacts", "description": "Gestión de contactos del CRM", "active": True},
+    {"name": "Leads CRM", "key": "leads", "description": "Gestión de leads del CRM", "active": True},
+    {"name": "Oportunidades CRM", "key": "opportunities", "description": "Pipeline comercial", "active": True},
+    {"name": "Actividades CRM", "key": "activities", "description": "Interacciones comerciales", "active": True},
 ]
 
 DEFAULT_ACTIONS = [
@@ -33,6 +38,8 @@ DEFAULT_ACTIONS = [
         "active": True,
     },
     {"name": "Restaurar", "key": "restore", "description": "Permite restaurar entidades archivadas", "active": True},
+    {"name": "Convertir", "key": "convert", "description": "Permite convertir leads", "active": True},
+    {"name": "Cerrar", "key": "close", "description": "Permite cerrar oportunidades", "active": True},
 ]
 
 DEFAULT_ROLES = [
@@ -43,7 +50,47 @@ DEFAULT_ROLES = [
     {"name": "developer", "description": "Colabora en proyectos y tareas asignadas", "active": True},
     {"name": "client", "description": "Consulta proyectos, tareas y reportes autorizados", "active": True},
     {"name": "viewer", "description": "Consulta información sin modificarla", "active": True},
+    {"name": "sales_director", "description": "Administra la operación comercial de la organización", "active": True},
+    {"name": "sales_manager", "description": "Administra los recursos comerciales de su equipo", "active": True},
+    {"name": "sales_representative", "description": "Administra sus recursos comerciales", "active": True},
+    {"name": "sales_assistant", "description": "Apoya la captura de información comercial", "active": True},
 ]
+
+CRM_READ_KEYS = {
+    f"{module}.read" for module in ("companies", "contacts", "leads", "opportunities", "activities", "teams", "reports")
+}
+CRM_WRITE_KEYS = {
+    f"{module}.{action}"
+    for module in ("companies", "contacts", "leads", "opportunities", "activities")
+    for action in ("read", "create", "update")
+}
+CRM_DIRECTOR_KEYS = CRM_WRITE_KEYS | {
+    "dashboard.read",
+    "companies.assign",
+    "companies.archive",
+    "contacts.assign",
+    "leads.assign",
+    "leads.convert",
+    "opportunities.assign",
+    "opportunities.close",
+    "activities.assign",
+    "teams.read",
+    "teams.update",
+    "teams.manage",
+    "reports.read",
+    "reports.export",
+}
+CRM_MANAGER_KEYS = CRM_WRITE_KEYS | {
+    "dashboard.read",
+    "leads.assign",
+    "opportunities.assign",
+    "opportunities.close",
+    "activities.assign",
+    "teams.read",
+    "teams.manage",
+    "reports.read",
+    "reports.export",
+}
 
 PROJECT_MANAGER_PERMISSION_KEYS = {
     "projects.read",
@@ -104,7 +151,21 @@ def role_permission_keys(role_name: str) -> set[str]:
     if role_name == "client":
         return CLIENT_PERMISSION_KEYS
     if role_name == "viewer":
-        return VIEWER_PERMISSION_KEYS
+        return VIEWER_PERMISSION_KEYS | CRM_READ_KEYS
+    if role_name == "sales_director":
+        return CRM_DIRECTOR_KEYS
+    if role_name == "sales_manager":
+        return CRM_MANAGER_KEYS
+    if role_name == "sales_representative":
+        return CRM_WRITE_KEYS | {"dashboard.read", "leads.convert"}
+    if role_name == "sales_assistant":
+        return CRM_READ_KEYS | {
+            "dashboard.read",
+            "contacts.create",
+            "contacts.update",
+            "activities.create",
+            "activities.update",
+        }
     if role_name == "user":
         return {"dashboard.read"}
     return set()

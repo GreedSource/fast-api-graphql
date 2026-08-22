@@ -1,0 +1,3 @@
+type CRMDashboard { companies: Int!, contacts: Int!, leads: Int!, opportunities: Int!, activities: Int!, pipelineValue: String! }
+type CRMDashboardResponse { status: Int!, message: String, data: CRMDashboard }
+extend type Query { crmDashboard(organizationId: ID!): CRMDashboardResponse! }

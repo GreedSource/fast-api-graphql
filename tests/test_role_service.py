@@ -13,7 +13,7 @@ from tests.factories import PERMISSION_ID, ROLE_ID, make_role
 async def test_role_service_create_serializes_permissions():
     repository = SimpleNamespace(create=AsyncMock(return_value=make_role()))
     service = RoleService()
-    service._RoleService__repository = repository
+    service.repository = repository
 
     result = await service.create(CreateRoleModel(name="Admin", description="System administrator"))
 
@@ -32,7 +32,7 @@ async def test_role_service_create_serializes_permissions():
 async def test_role_service_update_rejects_missing_role():
     repository = SimpleNamespace(update=AsyncMock(return_value=None))
     service = RoleService()
-    service._RoleService__repository = repository
+    service.repository = repository
 
     with pytest.raises(CustomGraphQLExceptionHelper) as exc_info:
         await service.update(UpdateRoleModel(id=ROLE_ID, name="Admin"))
@@ -44,7 +44,7 @@ async def test_role_service_update_rejects_missing_role():
 async def test_role_service_assign_permissions_returns_true_when_repository_succeeds():
     repository = SimpleNamespace(assign_permissions=AsyncMock(return_value=make_role()))
     service = RoleService()
-    service._RoleService__repository = repository
+    service.repository = repository
 
     assert await service.assign_permissions(str(ROLE_ID), [str(PERMISSION_ID)]) is True
     repository.assign_permissions.assert_awaited_once_with(str(ROLE_ID), [str(PERMISSION_ID)])
@@ -54,7 +54,7 @@ async def test_role_service_assign_permissions_returns_true_when_repository_succ
 async def test_role_service_add_permissions_rejects_repository_failure():
     repository = SimpleNamespace(add_permissions=AsyncMock(return_value=None))
     service = RoleService()
-    service._RoleService__repository = repository
+    service.repository = repository
 
     with pytest.raises(CustomGraphQLExceptionHelper) as exc_info:
         await service.add_permissions(str(ROLE_ID), [str(PERMISSION_ID)])

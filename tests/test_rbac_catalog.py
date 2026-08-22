@@ -1,5 +1,6 @@
 from server.seeders.rbac_catalog import (
     CLIENT_PERMISSION_KEYS,
+    CRM_READ_KEYS,
     DEFAULT_ACTIONS,
     DEFAULT_MODULES,
     DEFAULT_ROLES,
@@ -63,6 +64,7 @@ def test_default_roles_include_mvp_roles_without_duplicates():
     role_names = [role["name"] for role in DEFAULT_ROLES]
 
     assert {"super_admin", "project_manager", "developer", "client", "viewer"}.issubset(role_names)
+    assert {"sales_director", "sales_manager", "sales_representative", "sales_assistant"}.issubset(role_names)
     assert len(role_names) == len(set(role_names))
 
 
@@ -95,7 +97,7 @@ def test_developer_permissions_match_stage_2_contract():
 
 def test_client_and_viewer_permissions_are_read_only():
     assert role_permission_keys("client") == CLIENT_PERMISSION_KEYS
-    assert role_permission_keys("viewer") == CLIENT_PERMISSION_KEYS
+    assert role_permission_keys("viewer") == CLIENT_PERMISSION_KEYS | CRM_READ_KEYS
     assert role_permission_keys("client") == {"projects.read", "tasks.read", "reports.read"}
 
 

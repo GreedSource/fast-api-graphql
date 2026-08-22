@@ -1,0 +1,8 @@
+type Company { id: ID!, organizationId: ID!, teamId: ID, ownerId: ID, name: String!, industry: String, website: String, phone: String, email: String, address: String, status: String!, archivedAt: DateTime, createdAt: DateTime!, updatedAt: DateTime! }
+input CreateCompanyInput { organizationId: ID!, teamId: ID, ownerId: ID, name: String!, industry: String, website: String, phone: String, email: String, address: String }
+input UpdateCompanyInput { id: ID!, teamId: ID, ownerId: ID, name: String, industry: String, website: String, phone: String, email: String, address: String, status: String }
+type CompanyResponse { status: Int!, message: String, data: Company }
+type CompanyListResponse { status: Int!, message: String, data: [Company!]! }
+type CompanyBooleanResponse { status: Int!, message: String, data: Boolean }
+extend type Query { companies(organizationId: ID!): CompanyListResponse!, company(id: ID!): CompanyResponse! }
+extend type Mutation { createCompany(input: CreateCompanyInput!): CompanyResponse!, updateCompany(input: UpdateCompanyInput!): CompanyResponse!, deleteCompany(id: ID!): CompanyBooleanResponse! }

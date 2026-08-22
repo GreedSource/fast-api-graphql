@@ -1,58 +1,35 @@
 from server.decorators.singleton_decorator import singleton
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
-from server.models.dto.task_dto import CreateTaskModel, TaskItemModel, TaskListModel, UpdateTaskModel
+from server.models.dto.task_dto import CreateTaskModel, TaskItemModel, UpdateTaskModel
 from server.repositories.project_repository import ProjectRepository
 from server.repositories.task_repository import TaskRepository
+from server.services.base_service import BaseService
 
 
 @singleton
-class TaskService:
-    def __init__(self):
-        self.__repository = TaskRepository()
-        self.__project_repository = ProjectRepository()
+class TaskService(BaseService[CreateTaskModel, UpdateTaskModel, TaskItemModel]):
+    repository = TaskRepository()
+    project_repository = ProjectRepository()
+    item_model = TaskItemModel
+    resource_not_found = "Tarea no encontrada"
 
     async def create(self, payload: CreateTaskModel):
-        project = await self.__project_repository.find_by_id(payload.project_id)
-        if not project:
+        if not await self.project_repository.find_by_id(payload.project_id):
             raise CustomGraphQLExceptionHelper("Proyecto no encontrado", HTTPErrorCode.NOT_FOUND)
-
-        task_orm = await self.__repository.create(payload.model_dump(exclude_none=True))
-        return TaskItemModel.model_validate(task_orm).model_dump(by_alias=True, mode="json")
+        return await super().create(payload)
 
     async def get_all(self, project_id: str | None = None):
-        task_orms = await self.__repository.find_all(project_id=project_id)
-        return TaskListModel.model_validate(task_orms).model_dump(by_alias=True, mode="json")
-
-    async def get_one(self, task_id: str):
-        task_orm = await self.__repository.find_by_id(task_id)
-        if not task_orm:
-            return None
-        return TaskItemModel.model_validate(task_orm).model_dump(by_alias=True, mode="json")
-
-    async def update(self, payload: UpdateTaskModel):
-        task_orm = await self.__repository.update(
-            payload.id,
-            payload.model_dump(exclude={"id"}, exclude_none=True),
-        )
-        if not task_orm:
-            raise CustomGraphQLExceptionHelper("Tarea no encontrada", HTTPErrorCode.NOT_FOUND)
-        return TaskItemModel.model_validate(task_orm).model_dump(by_alias=True, mode="json")
+        return await super().get_all(project_id=project_id)
 
     async def assign(self, task_id: str, assignee_id: str):
-        task_orm = await self.__repository.update(task_id, {"assignee_id": assignee_id})
-        if not task_orm:
-            raise CustomGraphQLExceptionHelper("Tarea no encontrada", HTTPErrorCode.NOT_FOUND)
-        return TaskItemModel.model_validate(task_orm).model_dump(by_alias=True, mode="json")
+        task = await self.repository.update(task_id, {"assignee_id": assignee_id})
+        if not task:
+            self.raise_not_found()
+        return self.serialize(task)
 
     async def complete(self, task_id: str):
-        task_orm = await self.__repository.complete(task_id)
-        if not task_orm:
-            raise CustomGraphQLExceptionHelper("Tarea no encontrada", HTTPErrorCode.NOT_FOUND)
-        return TaskItemModel.model_validate(task_orm).model_dump(by_alias=True, mode="json")
-
-    async def delete(self, task_id: str):
-        deleted = await self.__repository.delete(task_id)
-        if not deleted:
-            raise CustomGraphQLExceptionHelper("Tarea no encontrada", HTTPErrorCode.NOT_FOUND)
-        return deleted
+        task = await self.repository.complete(task_id)
+        if not task:
+            self.raise_not_found()
+        return self.serialize(task)

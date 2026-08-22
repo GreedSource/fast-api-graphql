@@ -1,0 +1,9 @@
+type Opportunity { id: ID!, organizationId: ID!, teamId: ID, ownerId: ID, companyId: ID, contactId: ID, leadId: ID, name: String!, value: String!, probability: Int!, stage: String!, expectedCloseDate: DateTime, closedAt: DateTime, createdAt: DateTime!, updatedAt: DateTime! }
+input CreateOpportunityInput { organizationId: ID!, teamId: ID, ownerId: ID, companyId: ID, contactId: ID, leadId: ID, name: String!, value: String = "0", probability: Int = 0, stage: String = "qualified", expectedCloseDate: DateTime }
+input UpdateOpportunityInput { id: ID!, teamId: ID, ownerId: ID, name: String, value: String, probability: Int, stage: String, expectedCloseDate: DateTime }
+input CloseOpportunityInput { id: ID!, stage: String! }
+type OpportunityResponse { status: Int!, message: String, data: Opportunity }
+type OpportunityListResponse { status: Int!, message: String, data: [Opportunity!]! }
+type OpportunityBooleanResponse { status: Int!, message: String, data: Boolean }
+extend type Query { opportunities(organizationId: ID!): OpportunityListResponse!, opportunity(id: ID!): OpportunityResponse! }
+extend type Mutation { createOpportunity(input: CreateOpportunityInput!): OpportunityResponse!, updateOpportunity(input: UpdateOpportunityInput!): OpportunityResponse!, deleteOpportunity(id: ID!): OpportunityBooleanResponse!, closeOpportunity(input: CloseOpportunityInput!): OpportunityResponse! }

@@ -6,10 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from server.db.session import AsyncSessionLocal
 from server.decorators.singleton_decorator import singleton
 from server.models.orm.audit_log_orm import AuditLogORM
+from server.repositories.base_repository import BaseRepository
 
 
 @singleton
-class AuditLogRepository:
+class AuditLogRepository(BaseRepository[AuditLogORM]):
+    model = AuditLogORM
+
     async def create(self, data: dict, session: Optional[AsyncSession] = None) -> AuditLogORM:
         audit_log = AuditLogORM(**data)
         if session:
