@@ -42,6 +42,17 @@ def test_update_task_rejects_invalid_status():
         UpdateTaskModel(id=TASK_ID, status="invalid")
 
 
+def test_create_task_accepts_status_for_kanban_creation():
+    payload = CreateTaskModel(projectId=str(PROJECT_ID), title="Build API", status="in_progress")
+
+    assert payload.status == "in_progress"
+
+
+def test_create_task_rejects_invalid_status():
+    with pytest.raises(CustomGraphQLExceptionHelper):
+        CreateTaskModel(projectId=str(PROJECT_ID), title="Build API", status="invalid")
+
+
 def test_task_item_serializes_aliases_as_json():
     item = __import__("server.models.dto.task_dto", fromlist=["TaskItemModel"]).TaskItemModel
 

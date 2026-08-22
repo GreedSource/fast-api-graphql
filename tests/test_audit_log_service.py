@@ -5,7 +5,7 @@ from uuid import UUID
 
 import pytest
 
-from server.models.dto.audit_log_dto import CreateAuditLogModel
+from server.models.dto.audit_log_dto import AuditLogItemModel, CreateAuditLogModel
 from server.services.audit_log_service import AuditLogService
 
 AUDIT_ID = UUID("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee")
@@ -42,6 +42,13 @@ def test_create_audit_log_model_strips_and_serializes_metadata_alias():
     assert payload.module == "tasks"
     assert payload.action == "update"
     assert payload.metadata_json == {"reason": "ok"}
+
+
+def test_audit_log_item_reads_metadata_json_from_orm_attributes():
+    item = AuditLogItemModel.model_validate(make_audit_log())
+
+    assert item.metadata_json == {"reason": "allowed_by_task_policy"}
+    assert item.model_dump(by_alias=True, mode="json")["metadata"] == {"reason": "allowed_by_task_policy"}
 
 
 @pytest.mark.asyncio

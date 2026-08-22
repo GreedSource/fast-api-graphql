@@ -14,6 +14,10 @@ class CRMAdministrationResolver:
         self.authorization = AuthorizationService()
         self.organizations = CRMOrganizationService()
         self.teams = CRMTeamService()
+        self.query.set_field(
+            "crmOrganizations",
+            protect_bound(self, self.resolve_organizations, "dashboard", "read"),
+        )
         self.query.set_field("crmTeams", protect_bound(self, self.resolve_teams, "teams", "read"))
         self.mutation.set_field(
             "createCRMOrganization",
@@ -28,6 +32,13 @@ class CRMAdministrationResolver:
     async def resolve_teams(self, _, info, organizationId):
         await self.authorization.resolve_access(info.context["current_user"], organizationId)
         return ResponseModel(status=200, message="CRM teams fetched", data=await self.teams.get_all(organizationId))
+
+    async def resolve_organizations(self, _, info):
+        return ResponseModel(
+            status=200,
+            message="CRM organizations fetched",
+            data=await self.organizations.get_all(),
+        )
 
     async def resolve_create_organization(self, _, info, name, slug):
         return ResponseModel(

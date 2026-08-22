@@ -16,3 +16,6 @@ class CRMOrganizationService:
             raise CustomGraphQLExceptionHelper("Organization slug is invalid.")
         item = await self.repository.create({"name": name.strip(), "slug": normalized_slug})
         return {"id": str(item.id), "name": item.name, "slug": item.slug}
+
+    async def get_all(self):
+        return [{"id": str(item.id), "name": item.name, "slug": item.slug} for item in await self.repository.find_all()]

@@ -9,6 +9,7 @@ from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptio
 from server.models.dto.company_dto import CreateCompanyModel
 from server.models.dto.lead_dto import ConvertLeadModel
 from server.services.company_service import CompanyService
+from server.services.crm_organization_service import CRMOrganizationService
 from server.services.lead_service import LeadService
 
 ORG_ID = UUID("10000000-0000-0000-0000-000000000001")
@@ -52,3 +53,26 @@ async def test_convert_lead_rejects_already_converted():
 
     with pytest.raises(CustomGraphQLExceptionHelper):
         await service.convert(payload)
+
+
+@pytest.mark.asyncio
+async def test_crm_organizations_are_serialized():
+    service = CRMOrganizationService()
+    service.repository = SimpleNamespace(
+        find_all=AsyncMock(return_value=[SimpleNamespace(id=ORG_ID, name="Acme", slug="acme")])
+    )
+
+    result = await service.get_all()
+
+    assert result == [{"id": str(ORG_ID), "name": "Acme", "slug": "acme"}]
+
+
+@pytest.mark.asyncio
+async def test_create_crm_organization_rejects_invalid_slug():
+    service = CRMOrganizationService()
+    service.repository = SimpleNamespace(create=AsyncMock())
+
+    with pytest.raises(CustomGraphQLExceptionHelper):
+        await service.create("Acme", "Slug inválido")
+
+    service.repository.create.assert_not_awaited()

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any, List, Optional
 
-from pydantic import BaseModel, Field, RootModel, field_validator
+from pydantic import AliasChoices, BaseModel, Field, RootModel, field_validator
 
 from server.models.dto.project_dto import validate_uuid_value
 
@@ -14,7 +14,11 @@ class CreateAuditLogModel(BaseModel):
     resource_type: Optional[str] = Field(default=None, alias="resourceType", max_length=50)
     resource_id: Optional[str] = Field(default=None, alias="resourceId", max_length=100)
     status: str = Field(..., min_length=1, max_length=30)
-    metadata_json: dict[str, Any] | None = Field(default=None, alias="metadata")
+    metadata_json: dict[str, Any] | None = Field(
+        default=None,
+        alias="metadata",
+        validation_alias=AliasChoices("metadata", "metadata_json"),
+    )
 
     model_config = {"populate_by_name": True}
 
@@ -39,7 +43,11 @@ class AuditLogItemModel(BaseModel):
     resource_type: Optional[str] = Field(default=None, alias="resourceType")
     resource_id: Optional[str] = Field(default=None, alias="resourceId")
     status: str
-    metadata_json: dict[str, Any] | None = Field(default=None, alias="metadata")
+    metadata_json: dict[str, Any] | None = Field(
+        default=None,
+        alias="metadata",
+        validation_alias=AliasChoices("metadata_json", "metadata"),
+    )
     created_at: datetime = Field(..., alias="createdAt")
 
     model_config = {"populate_by_name": True, "from_attributes": True}

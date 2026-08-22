@@ -15,6 +15,7 @@ class CreateTaskModel(BaseModel):
     project_id: uuid.UUID = Field(..., alias="projectId")
     title: str = Field(..., min_length=1, max_length=160)
     description: Optional[str] = None
+    status: str = "todo"
     priority: str = "medium"
     assignee_id: Optional[uuid.UUID] = Field(default=None, alias="assigneeId")
     created_by_id: Optional[uuid.UUID] = Field(default=None, alias="createdById")
@@ -27,11 +28,18 @@ class CreateTaskModel(BaseModel):
     def validate_uuid(cls, value):
         return validate_uuid_value(value, "Task UUID field is not valid.")
 
-    @field_validator("title", "description", "priority", mode="before")
+    @field_validator("title", "description", "status", "priority", mode="before")
     @classmethod
     def strip_strings(cls, value):
         if isinstance(value, str):
             return value.strip()
+        return value
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, value):
+        if value not in TASK_STATUSES:
+            raise CustomGraphQLExceptionHelper("Invalid task status.")
         return value
 
     @field_validator("priority")

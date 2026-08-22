@@ -17,6 +17,7 @@ input CreateTaskInput {
   projectId: ID!
   title: String!
   description: String
+  status: String = "todo"
   priority: String = "medium"
   assigneeId: ID
   createdById: ID

@@ -38,6 +38,7 @@ async def test_task_service_create_serializes_task():
         {
             "project_id": PROJECT_ID,
             "title": "Build API",
+            "status": "todo",
             "priority": "medium",
             "assignee_id": USER_ID,
         }
