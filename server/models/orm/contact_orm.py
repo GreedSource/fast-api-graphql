@@ -9,10 +9,11 @@ from server.models.orm.crm_base_orm import CRMResourceMixin
 
 
 class ContactORM(CRMResourceMixin, Base):
-    __tablename__ = "crm_contacts"
+    __tablename__ = "contacts"
+    __table_args__ = {"schema": "crm"}
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("crm_companies.id", ondelete="SET NULL")
+        UUID(as_uuid=True), ForeignKey("crm.companies.id", ondelete="SET NULL")
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     lastname: Mapped[str] = mapped_column(String(100), nullable=False)

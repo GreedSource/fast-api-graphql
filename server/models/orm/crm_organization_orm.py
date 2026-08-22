@@ -9,7 +9,8 @@ from server.models.orm.crm_base_orm import TimestampMixin
 
 
 class CRMOrganizationORM(TimestampMixin, Base):
-    __tablename__ = "crm_organizations"
+    __tablename__ = "organizations"
+    __table_args__ = {"schema": "crm"}
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     slug: Mapped[str] = mapped_column(String(160), nullable=False, unique=True)

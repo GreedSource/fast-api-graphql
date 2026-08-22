@@ -10,7 +10,8 @@ from server.models.orm.crm_base_orm import CRMResourceMixin
 
 
 class CompanyORM(CRMResourceMixin, Base):
-    __tablename__ = "crm_companies"
+    __tablename__ = "companies"
+    __table_args__ = {"schema": "crm"}
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     industry: Mapped[str | None] = mapped_column(String(100))

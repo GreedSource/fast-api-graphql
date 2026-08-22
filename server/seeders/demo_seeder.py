@@ -1,7 +1,10 @@
+from datetime import datetime, timedelta, timezone
+
 from sqlalchemy import select
 
 from server.db.session import AsyncSessionLocal
 from server.helpers.logger_helper import LoggerHelper
+from server.models.orm.audit_log_orm import AuditLogORM
 from server.models.orm.project_member_orm import ProjectMemberORM
 from server.models.orm.project_orm import ProjectORM
 from server.models.orm.project_role_orm import ProjectRoleORM
@@ -42,6 +45,7 @@ async def seed():
                 name=item["name"],
                 description=item["description"],
                 owner_id=users[item["owner_email"]].id if item["owner_email"] in users else None,
+                status=item.get("status", "active"),
             )
             session.add(project)
             await session.commit()
@@ -75,14 +79,59 @@ async def seed():
                 title=item["title"],
                 description=item["description"],
                 priority=item["priority"],
+                status=item.get("status", "todo"),
                 assignee_id=users[item["assignee_email"]].id if item["assignee_email"] in users else None,
                 created_by_id=users[item["created_by_email"]].id if item["created_by_email"] in users else None,
+                due_date=datetime.now(timezone.utc) + timedelta(days=item.get("due_days", 14)),
+                completed_at=datetime.now(timezone.utc) if item.get("status") == "done" else None,
             )
             session.add(task)
             await session.commit()
             LoggerHelper.success(f"Demo task creada: {item['title']}")
 
+        tasks = await _map_by(session, TaskORM, TaskORM.title)
+        await _ensure_audit_logs(session, users, projects, tasks)
+        await session.commit()
+
 
 async def _map_by(session, model, column):
     result = await session.execute(select(model))
     return {getattr(item, column.key): item for item in result.scalars().all()}
+
+
+async def _ensure_audit_logs(session, users, projects, tasks):
+    result = await session.execute(select(AuditLogORM))
+    existing = {(log.module, log.action, log.resource_id, log.status) for log in result.scalars().all()}
+    project = projects["Plataforma de autorización"]
+    blocked_task = tasks["Resolver bloqueo de WebSocket"]
+    completed_task = tasks["Validar permisos contextuales"]
+    samples = [
+        ("joel.manager@example.com", "projects", "create", "Project", project.id),
+        ("joel.manager@example.com", "project_members", "assign", "ProjectMember", project.id),
+        ("maria.developer@example.com", "tasks", "update", "Task", blocked_task.id),
+        ("joel.manager@example.com", "tasks", "complete", "Task", completed_task.id),
+        (
+            "joel.manager@example.com",
+            "projects",
+            "archive",
+            "Project",
+            projects["Migración de reportes"].id,
+        ),
+    ]
+    for user_email, module, action, resource_type, resource_id in samples:
+        key = (module, action, str(resource_id), "success")
+        if key in existing:
+            continue
+        user = users.get(user_email)
+        session.add(
+            AuditLogORM(
+                user_id=user.id if user else None,
+                module=module,
+                action=action,
+                resource_type=resource_type,
+                resource_id=str(resource_id),
+                status="success",
+                metadata_json={"source": "demo-seeder"},
+            )
+        )
+        existing.add(key)

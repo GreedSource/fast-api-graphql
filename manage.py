@@ -53,6 +53,12 @@ async def _run_seed_demo():
     await seed_demo()
 
 
+async def _run_seed_crm_demo():
+    from server.seeders import seed_crm_demo
+
+    await seed_crm_demo()
+
+
 async def _run_seed_all():
     if not settings.RUN_SEEDERS:
         LoggerHelper.info("RUN_SEEDERS=false, semilla global omitida.")
@@ -104,6 +110,7 @@ def main():
             "seed-roles",
             "seed-project-roles",
             "seed-demo",
+            "seed-crm-demo",
             "seed-users",
             "seed-all",
             "status",
@@ -129,6 +136,8 @@ def main():
         asyncio.run(_run_seed_project_roles())
     elif args.command == "seed-demo":
         asyncio.run(_run_seed_demo())
+    elif args.command == "seed-crm-demo":
+        asyncio.run(_run_seed_crm_demo())
     elif args.command == "seed-users":
         asyncio.run(_run_seed_users())
     elif args.command == "seed-all":

@@ -27,17 +27,17 @@ DEFAULT_USERS = [
 async def seed():
     async with AsyncSessionLocal() as session:
         res = await session.execute(select(UserORM))
-        existing = len(res.scalars().all())
-
-        if existing:
-            LoggerHelper.info(f"Ya existen {existing} usuarios en PostgreSQL; semilla omitida.")
-            return
+        existing_users = {user.email: user for user in res.scalars().all()}
 
         roles_res = await session.execute(select(RoleORM))
         roles_map = {r.name: r for r in roles_res.scalars().all()}
 
         LoggerHelper.info("Insertando usuarios semilla en PostgreSQL...")
         for u_data in DEFAULT_USERS:
+            if u_data["email"] in existing_users:
+                LoggerHelper.info(f"Usuario existente: {u_data['email']}")
+                continue
+
             r_name = u_data.get("role_name")
             role = roles_map.get(r_name)
 
@@ -51,6 +51,7 @@ async def seed():
                 )
                 session.add(user)
                 await session.commit()
+                existing_users[user.email] = user
                 LoggerHelper.success(f"Usuario creado: {u_data['email']}")
             except Exception as exc:
                 await session.rollback()

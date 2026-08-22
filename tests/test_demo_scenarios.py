@@ -17,9 +17,9 @@ def test_demo_memberships_show_same_user_with_multiple_project_roles():
     }
 
     assert joel_roles == {
-        "Project A": "project_manager",
-        "Project B": "developer",
-        "Project C": "viewer",
+        "Plataforma de autorización": "project_manager",
+        "Portal de clientes": "developer",
+        "Migración de reportes": "viewer",
     }
 
 
@@ -31,3 +31,8 @@ def test_demo_tasks_reference_existing_projects_and_users():
         assert task["project_name"] in project_names
         assert task["created_by_email"] in user_emails
         assert task["assignee_email"] is None or task["assignee_email"] in user_emails
+
+
+def test_demo_tasks_cover_dashboard_statuses_and_priorities():
+    assert {task["status"] for task in DEMO_TASKS} == {"todo", "in_progress", "blocked", "done"}
+    assert {task["priority"] for task in DEMO_TASKS} >= {"low", "medium", "high", "urgent"}

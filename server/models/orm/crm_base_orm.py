@@ -17,10 +17,10 @@ class TimestampMixin:
 
 class CRMResourceMixin(TimestampMixin):
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("crm_organizations.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True), ForeignKey("crm.organizations.id", ondelete="CASCADE"), index=True
     )
     team_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("crm_teams.id", ondelete="SET NULL"), index=True
+        UUID(as_uuid=True), ForeignKey("crm.teams.id", ondelete="SET NULL"), index=True
     )
     owner_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), index=True

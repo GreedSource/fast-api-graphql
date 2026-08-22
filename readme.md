@@ -236,6 +236,8 @@ uvicorn app:app --host 0.0.0.0 --port 8000 --reload --ws websockets
 
 `manage.py` expone los siguientes comandos:
 
+La persistencia CRM vive en el schema PostgreSQL `crm`, con tablas como `crm.leads`, `crm.opportunities` y `crm.activities`. La migración correspondiente conserva los datos existentes y elimina el prefijo `crm_` de los nombres físicos.
+
 - `python manage.py migrate`
 - `python manage.py seed-modules`
 - `python manage.py seed-actions`
@@ -243,6 +245,7 @@ uvicorn app:app --host 0.0.0.0 --port 8000 --reload --ws websockets
 - `python manage.py seed-roles`
 - `python manage.py seed-project-roles`
 - `python manage.py seed-demo`
+- `python manage.py seed-crm-demo`
 - `python manage.py seed-users`
 - `python manage.py seed-all`
 - `python manage.py status`
@@ -256,8 +259,9 @@ Qué hace cada uno:
 - `seed-roles`: crea roles base
 - `seed-project-roles`: crea roles y permisos propios de proyecto
 - `seed-demo`: crea escenarios demostrativos de proyectos, miembros y tareas
+- `seed-crm-demo`: crea una organización CRM demo con equipos, empresas, contactos, leads, oportunidades, actividades y auditoría
 - `seed-users`: crea usuarios base
-- `seed-all`: ejecuta todos los seeders si `RUN_SEEDERS=true`; no sustituye a `migrate`
+- `seed-all`: ejecuta catálogo RBAC, usuarios, proyectos, tareas, CRM y auditoría si `RUN_SEEDERS=true`; no sustituye a `migrate`
 - `status`: muestra migraciones aplicadas
 
 ## Endpoints disponibles

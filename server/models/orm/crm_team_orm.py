@@ -10,22 +10,22 @@ from server.models.orm.crm_base_orm import TimestampMixin, utcnow
 
 
 class CRMTeamORM(TimestampMixin, Base):
-    __tablename__ = "crm_teams"
-    __table_args__ = (UniqueConstraint("organization_id", "name"),)
+    __tablename__ = "teams"
+    __table_args__ = (UniqueConstraint("organization_id", "name"), {"schema": "crm"})
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("crm_organizations.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True), ForeignKey("crm.organizations.id", ondelete="CASCADE"), index=True
     )
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
 
 
 class CRMTeamMemberORM(Base):
-    __tablename__ = "crm_team_members"
-    __table_args__ = (UniqueConstraint("team_id", "user_id"),)
+    __tablename__ = "team_members"
+    __table_args__ = (UniqueConstraint("team_id", "user_id"), {"schema": "crm"})
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     team_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("crm_teams.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True), ForeignKey("crm.teams.id", ondelete="CASCADE"), index=True
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True

@@ -10,13 +10,14 @@ from server.models.orm.crm_base_orm import CRMResourceMixin
 
 
 class LeadORM(CRMResourceMixin, Base):
-    __tablename__ = "crm_leads"
+    __tablename__ = "leads"
+    __table_args__ = {"schema": "crm"}
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("crm_companies.id", ondelete="SET NULL")
+        UUID(as_uuid=True), ForeignKey("crm.companies.id", ondelete="SET NULL")
     )
     contact_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("crm_contacts.id", ondelete="SET NULL")
+        UUID(as_uuid=True), ForeignKey("crm.contacts.id", ondelete="SET NULL")
     )
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     source: Mapped[str | None] = mapped_column(String(80))
