@@ -7,7 +7,7 @@ from ariadne.explorer import ExplorerGraphiQL
 from ariadne.types import ExecutionResult
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from graphql import parse
 from graphql import subscribe as graphql_subscribe
 from starlette.background import BackgroundTasks
@@ -86,19 +86,27 @@ async def _build_ws_auth_context(websocket: WebSocket, payload: dict | None = No
 
 
 def create_app() -> FastAPI:
+    from server.api import api_v1_router
     from server.config.settings import settings
-    from server.db.session import engine
+    from server.core.lifespan import lifespan
     from server.enums.http_error_code_enum import HTTPErrorCode
+    from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
     from server.helpers.logger_helper import LoggerHelper
     from server.helpers.mail_helper import MailHelper
-    from server.helpers.redis_helper import RedisHelper
     from server.helpers.template_helper import TemplateHelper
     from server.middlewares.cookie_logging_middleware import CookieLoggingMiddleware
     from server.middlewares.ws_logger_middleware import WSLoggerMiddleware
     from server.schema import schema
     from server.utils.custom_error_formatter_utils import custom_format_error
 
-    app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
+    app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan)
+
+    @app.exception_handler(CustomGraphQLExceptionHelper)
+    async def rest_exception_handler(_request: Request, exc: CustomGraphQLExceptionHelper):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"status": exc.status_code, "message": exc.message, "code": exc.code, "details": exc.details},
+        )
 
     # ✅ Inicializar MailHelper AQUÍ
     MailHelper().init_app()
@@ -117,6 +125,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.include_router(api_v1_router)
 
     # Rutas
     @app.get("/")
@@ -261,12 +271,5 @@ def create_app() -> FastAPI:
                 await websocket.close(code=close_code)
             except Exception:
                 pass
-
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        LoggerHelper.info("Shutting down application...")
-        await RedisHelper().close()
-        await engine.dispose()
-        LoggerHelper.info("Application shutdown complete")
 
     return app
