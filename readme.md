@@ -41,6 +41,7 @@ fast-api-graphql/
 ├── app.py
 ├── manage.py
 ├── requirements.txt
+├── requirements-dev.txt
 ├── dockerfile
 ├── docker-compose.yml
 ├── ruff.toml
@@ -199,8 +200,10 @@ source .venv/bin/activate
 2. Instala dependencias:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
+
+`requirements.txt` contiene solo las dependencias de ejecución y se instala en la imagen final. `requirements-dev.txt` incluye ese archivo y agrega pytest, Ruff y pre-commit para desarrollo, pruebas y calidad de código.
 
 3. Asegúrate de tener PostgreSQL y Redis disponibles y configura `.env`
 
@@ -325,6 +328,8 @@ ruff check .
 python -m pytest
 python manage.py status
 ```
+
+Para instalar únicamente las dependencias necesarias para ejecutar la API (como hace Docker), usa `pip install -r requirements.txt`. Para desarrollar o ejecutar las validaciones instala `pip install -r requirements-dev.txt`.
 
 `manage.py status` necesita una instancia PostgreSQL accesible. Para cambios GraphQL o de persistencia valida también
 `GET /ping`, `GET /graphql`, la operación afectada y las migraciones/seeders involucrados.

@@ -34,12 +34,14 @@ Esto levanta `api`, `postgres` y `redis`. En el arranque de la API se ejecutan m
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 cp .env.example .env
 python manage.py migrate
 python manage.py seed-all
 uvicorn app:app --host 0.0.0.0 --port 8000 --reload --ws websockets
 ```
+
+`requirements-dev.txt` incluye dependencias de runtime, pruebas, lint y hooks. `requirements.txt` se reserva para dependencias de runtime y para la imagen de producción.
 
 ### Comandos de Linter
 

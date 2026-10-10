@@ -1,0 +1,7 @@
+# Incluye runtime y herramientas para pruebas, lint y hooks locales.
+-r requirements.txt
+
+pre-commit==4.5.1
+pytest==8.4.2
+pytest-asyncio==1.1.0
+ruff==0.15.1

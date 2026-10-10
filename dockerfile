@@ -5,12 +5,11 @@ FROM python:3.12-slim-bookworm AS lint
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir ruff
+COPY requirements-dev.txt requirements.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
 
 COPY server/ server/
 COPY app.py .
-COPY requirements.txt .
-
 RUN ruff check .
 
 # =========================

@@ -1,62 +1,49 @@
-# Entorno virtual
+# Entornos locales y cachés Python
 .venv/
 venv/
 ENV/
 env/
-
-# Archivos Python compilados
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
-
-# Archivos de logs
-*.log
-
-# Configuración de usuario de VSCode
-.vscode/
-
-# Archivos de pruebas / cobertura
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 .coverage
 htmlcov/
 .tox/
-nosetests.xml
-test-results/
-.pytest_cache/
+*.egg-info/
+build/
+dist/
 
-# Archivos de Jupyter
-.ipynb_checkpoints/
+# Pruebas, documentación e instrucciones del entorno local
+tests/
+docs/
+README.md
+readme.md
+AGENTS.md
 
-# Archivos de entorno y configuración local
+# Secretos y configuración local
 .env
-*.env
 .env.*
-server/.env
-server/*.env
+*.env
 
-# Archivos del sistema operativo
+# Git, IDE y archivos del sistema
+.git/
+.github/
+.vscode/
+.idea/
+.codex/
 .DS_Store
 Thumbs.db
 
-# Archivos de Docker creados en el build
+# Configuración de Docker local y artefactos
+docker-compose.override.yml
+*.log
 *.pid
 *.tar
-docker-compose.override.yml
-
-# Salidas de build temporales
-dist/
-build/
-*.egg-info/
-
-# Mongo dumps u otros datos temporales de base de datos
+*.sqlite3
 dump/
 *.bson
 *.mongodump
-*.json
-
-# Archivos de IDEs
-.idea/
-*.sublime-workspace
-*.sublime-project
-
-# Archivos del runtime
-*.sqlite3
