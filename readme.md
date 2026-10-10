@@ -7,6 +7,7 @@ API backend construida con `FastAPI`, `Ariadne` y `PostgreSQL`, orientada a aute
 - API GraphQL sobre `FastAPI`
 - Soporte HTTP y WebSocket para GraphQL
 - Autenticación con JWT
+- Impersonación temporal de usuarios con conservación segura de la sesión original
 - RBAC con roles, permisos, módulos y acciones
 - Autorización contextual por proyecto y rol de proyecto
 - Gestión de proyectos, miembros, tareas y logs de auditoría
@@ -276,6 +277,44 @@ Rutas HTTP principales:
 También existe soporte WebSocket en:
 
 - `WS /graphql`
+
+## Autenticación y control de acceso
+
+La autenticación usa JWT y puede recibir el token desde `Authorization: Bearer <token>` o desde las cookies de sesión. El backend comprueba permisos en los resolvers; los controles del cliente no reemplazan esta autorización.
+
+El RBAC organiza los permisos como módulo y acción. La acción nueva `users:impersonate` habilita el acceso temporal a otro usuario y se agrega al catálogo y a los roles administrativos mediante la migración `v012_add_impersonation_permission_postgresql_20261010120000`.
+
+### Impersonación
+
+El dominio `auth` expone estas mutaciones:
+
+```graphql
+mutation ImpersonateUser($userId: ID!) {
+  impersonateUser(userId: $userId) {
+    data { accessToken refreshToken user { id email } }
+    message
+  }
+}
+
+mutation StopImpersonation {
+  stopImpersonation {
+    data { accessToken refreshToken user { id email } }
+    message
+  }
+}
+```
+
+`impersonateUser` requiere una sesión autenticada y el permiso `users:impersonate`. La API emite tokens temporales para el usuario objetivo e incluye una referencia firmada al administrador que inició el flujo. Las consultas posteriores resuelven los permisos y asignaciones del usuario objetivo.
+
+`stopImpersonation` valida esa referencia y emite una nueva sesión para el administrador original. El flujo rechaza impersonaciones de la propia cuenta, usuarios inactivos, sesiones que ya están impersonando y solicitudes de regreso sin una impersonación válida. La identidad original se conserva en los claims firmados, no se acepta como un identificador libre enviado por el cliente.
+
+Aplica migraciones antes de habilitar la función en una instalación existente:
+
+```bash
+python manage.py migrate
+```
+
+Los despliegues que cargan el catálogo RBAC mediante seeders también pueden ejecutar `python manage.py seed-all` si `RUN_SEEDERS=true`.
 
 ## Desarrollo
 
