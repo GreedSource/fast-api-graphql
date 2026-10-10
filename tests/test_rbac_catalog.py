@@ -45,6 +45,7 @@ def test_default_actions_include_mvp_actions_without_duplicates():
         "export",
         "manage",
         "restore",
+        "impersonate",
     }.issubset(keys)
     assert len(keys) == len(set(keys))
     assert len(DEFAULT_ACTIONS) == len(keys)

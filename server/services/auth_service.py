@@ -19,6 +19,9 @@ from server.utils.auth_utils import (
 
 @singleton
 class AuthService:
+    IMPERSONATION_ACCESS_MINUTES = 15
+    IMPERSONATION_REFRESH_MINUTES = 30
+
     def __init__(self):
         self.__repository = UserRepository()
         self.__mail_helper = MailHelper()
@@ -57,9 +60,61 @@ class AuthService:
         user_orm = await self.__repository.find_by_id(payload.get("id"))
         if not user_orm:
             raise CustomGraphQLExceptionHelper("Usuario no encontrado")
+        if getattr(user_orm, "is_active", True) is False:
+            raise CustomGraphQLExceptionHelper("El usuario está inactivo")
         user_dto = UserItemModel.model_validate(user_orm).model_dump(mode="json")
-        access_token = create_token(user_dto)
 
+        impersonated_by = payload.get("impersonated_by")
+        if impersonated_by:
+            actor_orm = await self.__repository.find_by_id(impersonated_by)
+            if not actor_orm or getattr(actor_orm, "is_active", True) is False:
+                raise CustomGraphQLExceptionHelper("La sesión original ya no está disponible")
+
+            token_payload = {**user_dto, "impersonated_by": str(impersonated_by)}
+            access_token = create_token(token_payload, expires_in=self.IMPERSONATION_ACCESS_MINUTES)
+        else:
+            access_token = create_token(user_dto)
+
+        return {
+            "user": user_dto,
+            "accessToken": access_token,
+            "refreshToken": refresh_token,
+        }
+
+    async def impersonate(self, actor_id: str, target_id: str, auth_payload: dict | None = None):
+        if auth_payload and auth_payload.get("impersonated_by"):
+            raise CustomGraphQLExceptionHelper("No puedes iniciar una impersonación anidada")
+        if str(actor_id) == str(target_id):
+            raise CustomGraphQLExceptionHelper("No puedes impersonar tu propia cuenta")
+
+        target_orm = await self.__repository.find_by_id(target_id)
+        if not target_orm:
+            raise CustomGraphQLExceptionHelper("Usuario no encontrado")
+        if getattr(target_orm, "is_active", True) is False:
+            raise CustomGraphQLExceptionHelper("No puedes impersonar un usuario inactivo")
+
+        user_dto = UserItemModel.model_validate(target_orm).model_dump(mode="json")
+        token_payload = {**user_dto, "impersonated_by": str(actor_id)}
+        return {
+            "user": user_dto,
+            "accessToken": create_token(token_payload, expires_in=self.IMPERSONATION_ACCESS_MINUTES),
+            "refreshToken": create_refresh_token(token_payload, expires_in=self.IMPERSONATION_REFRESH_MINUTES),
+        }
+
+    async def stop_impersonation(self, current_user_id: str, auth_payload: dict):
+        actor_id = auth_payload.get("impersonated_by")
+        if not actor_id:
+            raise CustomGraphQLExceptionHelper("No hay una impersonación activa")
+        if str(auth_payload.get("id")) != str(current_user_id):
+            raise CustomGraphQLExceptionHelper("La sesión de impersonación es inválida")
+
+        actor_orm = await self.__repository.find_by_id(actor_id)
+        if not actor_orm or getattr(actor_orm, "is_active", True) is False:
+            raise CustomGraphQLExceptionHelper("La cuenta original ya no está disponible")
+
+        user_dto = UserItemModel.model_validate(actor_orm).model_dump(mode="json")
+        access_token = create_token(user_dto)
+        refresh_token = create_refresh_token(user_dto)
         return {
             "user": user_dto,
             "accessToken": access_token,

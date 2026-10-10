@@ -48,6 +48,8 @@ extend type Mutation {
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
   refreshToken(refreshToken: String!): AuthResponse!
+  impersonateUser(userId: ID!): AuthResponse!
+  stopImpersonation: AuthResponse!
   recoverPassword(email: String!): BooleanResponse!
   resetPassword(input: ResetPasswordInput!): BooleanResponse!
   logout: BooleanResponse!

@@ -34,6 +34,7 @@ async def test_require_token_accepts_authorization_header(monkeypatch):
     assert info.context["current_user"] == user
     assert info.context["access_token"] == "access-token"
     assert info.context["refresh_token"] is None
+    assert info.context["auth_payload"] == {"id": "user-1"}
     user_service.get_user.assert_awaited_once_with("user-1")
 
 

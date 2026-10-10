@@ -37,6 +37,12 @@ DEFAULT_ACTIONS = [
         "description": "Permite administrar relaciones o recursos",
         "active": True,
     },
+    {
+        "name": "Impersonar",
+        "key": "impersonate",
+        "description": "Permite iniciar una sesión temporal como otro usuario",
+        "active": True,
+    },
     {"name": "Restaurar", "key": "restore", "description": "Permite restaurar entidades archivadas", "active": True},
     {"name": "Convertir", "key": "convert", "description": "Permite convertir leads", "active": True},
     {"name": "Cerrar", "key": "close", "description": "Permite cerrar oportunidades", "active": True},

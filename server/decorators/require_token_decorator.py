@@ -60,6 +60,7 @@ def require_token(resolver):
         # Contexto
         # -------------------------
         info.context["current_user"] = user
+        info.context["auth_payload"] = payload
         info.context["access_token"] = token
         info.context["refresh_token"] = refresh_token
 

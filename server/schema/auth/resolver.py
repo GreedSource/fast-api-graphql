@@ -2,6 +2,7 @@ from ariadne import MutationType, QueryType
 from graphql import GraphQLResolveInfo
 
 from server.config.settings import settings
+from server.decorators.require_permission_decorator import require_permission
 from server.decorators.require_token_decorator import require_token
 from server.enums.http_error_code_enum import HTTPErrorCode
 from server.helpers.custom_graphql_exception_helper import CustomGraphQLExceptionHelper
@@ -34,6 +35,8 @@ class AuthResolver:
         self.mutation.set_field("register", self.resolve_register)
         self.mutation.set_field("login", self.resolve_login)
         self.mutation.set_field("refreshToken", self.resolve_refresh_token)
+        self.mutation.set_field("impersonateUser", self.resolve_impersonate_user)
+        self.mutation.set_field("stopImpersonation", self.resolve_stop_impersonation)
         self.mutation.set_field("recoverPassword", self.resolve_recover_password)
         self.mutation.set_field("resetPassword", self.resolve_reset_password)
         self.mutation.set_field("logout", self.resolve_logout)
@@ -116,6 +119,55 @@ class AuthResolver:
             status=200,
             message="Token refreshed",
             data=result,
+        )
+
+    @require_token
+    @require_permission(type="users", action="impersonate")
+    async def resolve_impersonate_user(self, _, info: GraphQLResolveInfo, userId):
+        response = info.context["response"]
+        result = await self.auth_service.impersonate(
+            actor_id=info.context["current_user"]["id"],
+            target_id=userId,
+            auth_payload=info.context["auth_payload"],
+        )
+        self._set_auth_cookies(response, result, access_max_age=15 * 60, refresh_max_age=30 * 60)
+        return ResponseModel(
+            status=200,
+            message="Impersonation started",
+            data=result,
+        )
+
+    @require_token
+    async def resolve_stop_impersonation(self, _, info: GraphQLResolveInfo):
+        response = info.context["response"]
+        result = await self.auth_service.stop_impersonation(
+            current_user_id=info.context["current_user"]["id"],
+            auth_payload=info.context["auth_payload"],
+        )
+        self._set_auth_cookies(response, result)
+        return ResponseModel(
+            status=200,
+            message="Impersonation stopped",
+            data=result,
+        )
+
+    @staticmethod
+    def _set_auth_cookies(response, payload, access_max_age=60 * 60, refresh_max_age=7 * 24 * 60 * 60):
+        response.set_cookie(
+            key=settings.ACCESS_COOKIE_NAME,
+            value=payload["accessToken"],
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=access_max_age,
+        )
+        response.set_cookie(
+            key=settings.REFRESH_COOKIE_NAME,
+            value=payload["refreshToken"],
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=refresh_max_age,
         )
 
     async def resolve_recover_password(self, _, info: GraphQLResolveInfo, email):
